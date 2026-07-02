@@ -1,0 +1,272 @@
+using UnityEngine;
+using UnityEngine.InputSystem;
+using RTSFramework.Selection;
+using RTSFramework.Units;
+using RTSFramework.Commands;
+using RTSFramework.Combat;
+using RTSFramework.Resources;
+
+namespace RTSFramework.InputSystem
+{
+    public class RTSInputController : MonoBehaviour
+    {
+        [Header("Layers")]
+        [SerializeField] private LayerMask terrainLayer;
+
+        [Header("Selection Box Visuals")]
+        [SerializeField] private Color boxColor = new Color(0.8f, 1f, 0.8f, 0.15f);
+        [SerializeField] private Color borderColor = new Color(0.8f, 1f, 0.8f, 0.8f);
+        [SerializeField] private float borderThickness = 2f;
+
+        private Camera mainCamera;
+        private Vector2 dragStartPosition;
+        private bool isDragging;
+
+        private static Texture2D whiteTexture;
+        private static Texture2D WhiteTexture
+        {
+            get
+            {
+                if (whiteTexture == null)
+                {
+                    whiteTexture = new Texture2D(1, 1);
+                    whiteTexture.SetPixel(0, 0, Color.white);
+                    whiteTexture.Apply();
+                }
+                return whiteTexture;
+            }
+        }
+
+        private void Start()
+        {
+            mainCamera = Camera.main;
+        }
+
+        private void Update()
+        {
+            HandleSelectionAndCommands();
+        }
+
+        private void HandleSelectionAndCommands()
+        {
+            if (mainCamera == null) return;
+
+            var mouse = Mouse.current;
+            var keyboard = Keyboard.current;
+            if (mouse == null) return;
+
+            // --- SELECTION (Left Click & Drag) ---
+            if (mouse.leftButton.wasPressedThisFrame)
+            {
+                isDragging = true;
+                dragStartPosition = mouse.position.ReadValue();
+            }
+
+            if (mouse.leftButton.wasReleasedThisFrame && isDragging)
+            {
+                isDragging = false;
+                Vector2 dragEndPosition = mouse.position.ReadValue();
+
+                bool isAccumulating = keyboard != null && (keyboard.ctrlKey.isPressed || keyboard.leftCtrlKey.isPressed);
+
+                if (Vector2.Distance(dragStartPosition, dragEndPosition) < 5f)
+                {
+                    // Single Selection
+                    Ray ray = mainCamera.ScreenPointToRay(dragEndPosition);
+                    if (Physics.Raycast(ray, out RaycastHit hit, 1000f, SelectionManager.Instance.SelectableLayer))
+                    {
+                        ISelectable selectable = hit.collider.GetComponentInParent<ISelectable>();
+                        if (selectable != null)
+                        {
+                            SelectionManager.Instance.Select(selectable, !isAccumulating);
+                        }
+                        else
+                        {
+                            if (!isAccumulating) SelectionManager.Instance.ClearSelection();
+                        }
+                    }
+                    else
+                    {
+                        if (!isAccumulating) SelectionManager.Instance.ClearSelection();
+                    }
+                }
+                else
+                {
+                    // Box Selection
+                    Bounds viewportBounds = GetViewportBounds(mainCamera, dragStartPosition, dragEndPosition);
+                    
+                    if (!isAccumulating)
+                    {
+                        SelectionManager.Instance.ClearSelection();
+                    }
+
+                    foreach (var selectable in SelectionManager.AllSelectables)
+                    {
+                        if (selectable == null || selectable.Equals(null)) continue;
+                        
+                        Vector3 viewportPos = mainCamera.WorldToViewportPoint(selectable.Transform.position);
+                        if (viewportBounds.Contains(viewportPos))
+                        {
+                            SelectionManager.Instance.Select(selectable, false);
+                        }
+                    }
+                }
+
+                // Play selection voice response for the lead selected unit
+                PlayLeadVoice(false);
+            }
+
+            // --- COMMANDS (Right Click) ---
+            if (mouse.rightButton.wasPressedThisFrame)
+            {
+                Ray ray = mainCamera.ScreenPointToRay(mouse.position.ReadValue());
+                if (Physics.Raycast(ray, out RaycastHit hit, 1000f))
+                {
+                    bool isQueueing = keyboard != null && (keyboard.shiftKey.isPressed || keyboard.leftShiftKey.isPressed);
+
+                    // Check if we hit a resource source
+                    ResourceSource targetSource = hit.collider.GetComponentInParent<ResourceSource>();
+                    // Check if we hit a unit/entity with a Health component
+                    Health targetHealth = hit.collider.GetComponentInParent<Health>();
+
+                    bool commandIssued = false;
+
+                    foreach (var selected in SelectionManager.Instance.SelectedObjects)
+                    {
+                        if (selected == null || selected.Equals(null)) continue;
+
+                        if (selected.GameObject.TryGetComponent<UnitController>(out var unit))
+                        {
+                            if (!unit.IsPlayerOwned) continue; // Only command player-owned units!
+
+                            if (targetSource != null)
+                            {
+                                // Gather resource
+                                unit.GiveCommand(new GatherCommand(targetSource), isQueueing);
+                                commandIssued = true;
+                            }
+                            else if (targetHealth != null && targetHealth.gameObject != unit.gameObject)
+                            {
+                                // Attack target
+                                unit.GiveCommand(new AttackCommand(targetHealth.gameObject), isQueueing);
+                                commandIssued = true;
+                            }
+                            else
+                            {
+                                // Move to point
+                                unit.GiveCommand(new MoveCommand(hit.point), isQueueing);
+                                commandIssued = true;
+                            }
+                        }
+                    }
+
+                    if (commandIssued)
+                    {
+                        PlayLeadVoice(true);
+                    }
+                }
+            }
+        }
+
+        private void OnGUI()
+        {
+            if (isDragging)
+            {
+                var mouse = Mouse.current;
+                if (mouse == null) return;
+
+                Vector2 currentMousePos = mouse.position.ReadValue();
+                Rect rect = GetScreenRect(dragStartPosition, currentMousePos);
+
+                // Draw filled rectangle
+                DrawScreenRect(rect, boxColor);
+                // Draw border
+                DrawScreenRectBorder(rect, borderThickness, borderColor);
+            }
+        }
+
+        private void PlayLeadVoice(bool isCommand)
+        {
+            var selectedObjects = SelectionManager.Instance.SelectedObjects;
+            if (selectedObjects.Count == 0) return;
+
+            UnitController leadUnit = null;
+            int highestPriority = int.MinValue;
+
+            foreach (var selected in selectedObjects)
+            {
+                if (selected == null || selected.Equals(null)) continue;
+                if (selected.GameObject.TryGetComponent<UnitController>(out var unit))
+                {
+                    if (!unit.IsPlayerOwned) continue;
+
+                    if (unit.UnitData != null && unit.UnitData.SelectionPriority > highestPriority)
+                    {
+                        highestPriority = unit.UnitData.SelectionPriority;
+                        leadUnit = unit;
+                    }
+                }
+            }
+
+            if (leadUnit != null && leadUnit.UnitData != null)
+            {
+                var clips = isCommand ? leadUnit.UnitData.CommandVoices : leadUnit.UnitData.SelectVoices;
+                if (Audio.RTSAudioManager.Instance != null)
+                {
+                    Audio.RTSAudioManager.Instance.PlayVoice(clips);
+                }
+            }
+        }
+
+        #region Helper Methods
+
+        private static Rect GetScreenRect(Vector2 screenPosition1, Vector2 screenPosition2)
+        {
+            // Move origin from bottom left (Unity Screen) to top left (GUI)
+            screenPosition1.y = Screen.height - screenPosition1.y;
+            screenPosition2.y = Screen.height - screenPosition2.y;
+
+            var topLeft = Vector2.Min(screenPosition1, screenPosition2);
+            var bottomRight = Vector2.Max(screenPosition1, screenPosition2);
+
+            return Rect.MinMaxRect(topLeft.x, topLeft.y, bottomRight.x, bottomRight.y);
+        }
+
+        private static Bounds GetViewportBounds(Camera camera, Vector2 screenPosition1, Vector2 screenPosition2)
+        {
+            Vector3 v1 = camera.ScreenToViewportPoint(screenPosition1);
+            Vector3 v2 = camera.ScreenToViewportPoint(screenPosition2);
+
+            Vector3 min = Vector3.Min(v1, v2);
+            Vector3 max = Vector3.Max(v1, v2);
+
+            min.z = camera.nearClipPlane;
+            max.z = camera.farClipPlane;
+
+            var bounds = new Bounds();
+            bounds.SetMinMax(min, max);
+            return bounds;
+        }
+
+        private static void DrawScreenRect(Rect rect, Color color)
+        {
+            GUI.color = color;
+            GUI.DrawTexture(rect, WhiteTexture);
+            GUI.color = Color.white;
+        }
+
+        private static void DrawScreenRectBorder(Rect rect, float thickness, Color color)
+        {
+            // Top
+            DrawScreenRect(new Rect(rect.xMin, rect.yMin, rect.width, thickness), color);
+            // Left
+            DrawScreenRect(new Rect(rect.xMin, rect.yMin, thickness, rect.height), color);
+            // Right
+            DrawScreenRect(new Rect(rect.xMax - thickness, rect.yMin, thickness, rect.height), color);
+            // Bottom
+            DrawScreenRect(new Rect(rect.xMin, rect.yMax - thickness, rect.width, thickness), color);
+        }
+
+        #endregion
+    }
+}
