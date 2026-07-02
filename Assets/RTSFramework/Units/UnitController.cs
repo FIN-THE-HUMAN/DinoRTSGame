@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 using RTSFramework.Commands;
 using RTSFramework.Selection;
 
@@ -77,6 +78,42 @@ namespace RTSFramework.Units
                 cmd.Cancel(gameObject);
             }
             commandQueue.Clear();
+        }
+
+        public void EvadeFrom(Vector3 dangerPoint, float pushDistance)
+        {
+            // Only evade if currently idle (no active commands)
+            if (HasActiveCommand) return;
+
+            Vector3 diff = transform.position - dangerPoint;
+            diff.y = 0f;
+            
+            Vector3 escapeDir;
+            if (diff.sqrMagnitude > 0.01f)
+            {
+                escapeDir = diff.normalized;
+            }
+            else
+            {
+                // If exactly at the danger point, pick a random angle
+                float randomAngle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
+                escapeDir = new Vector3(Mathf.Cos(randomAngle), 0f, Mathf.Sin(randomAngle));
+            }
+
+            Vector3 targetEscape = transform.position + escapeDir * pushDistance;
+
+            // Project onto NavMesh to ensure it is walkable
+            if (NavMesh.SamplePosition(targetEscape, out NavMeshHit hit, 3.0f, NavMesh.AllAreas))
+            {
+                targetEscape = hit.position;
+            }
+            else
+            {
+                return; // Can't evade here
+            }
+
+            // Give a temporary move command to step aside
+            GiveCommand(new MoveCommand(targetEscape), false);
         }
 
         // ISelectable implementation

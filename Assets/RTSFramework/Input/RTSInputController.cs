@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.AI;
 using RTSFramework.Selection;
 using RTSFramework.Units;
 using RTSFramework.Commands;
@@ -163,30 +165,66 @@ namespace RTSFramework.InputSystem
 
                     bool commandIssued = false;
 
+                    // Gather all player-controlled units from selection
+                    List<UnitController> movingUnits = new List<UnitController>();
                     foreach (var selected in SelectionManager.Instance.SelectedObjects)
                     {
                         if (selected == null || selected.Equals(null)) continue;
-
                         if (selected.GameObject.TryGetComponent<UnitController>(out var unit))
                         {
-                            if (!unit.IsPlayerOwned) continue; // Only command player-owned units!
-
-                            if (targetSource != null)
+                            if (unit.IsPlayerOwned)
                             {
-                                // Gather resource
+                                movingUnits.Add(unit);
+                            }
+                        }
+                    }
+
+                    if (movingUnits.Count > 0)
+                    {
+                        if (targetSource != null)
+                        {
+                            // Gather resource
+                            foreach (var unit in movingUnits)
+                            {
                                 unit.GiveCommand(new GatherCommand(targetSource), isQueueing);
                                 commandIssued = true;
                             }
-                            else if (targetHealth != null && targetHealth.gameObject != unit.gameObject)
+                        }
+                        else if (targetHealth != null)
+                        {
+                            // Attack target
+                            foreach (var unit in movingUnits)
                             {
-                                // Attack target
-                                unit.GiveCommand(new AttackCommand(targetHealth.gameObject), isQueueing);
-                                commandIssued = true;
+                                if (targetHealth.gameObject != unit.gameObject)
+                                {
+                                    unit.GiveCommand(new AttackCommand(targetHealth.gameObject), isQueueing);
+                                    commandIssued = true;
+                                }
                             }
-                            else
+                        }
+                        else
+                        {
+                            // Move to point (use spiral offsets to prevent crowding/pushing)
+                            for (int i = 0; i < movingUnits.Count; i++)
                             {
-                                // Move to point
-                                unit.GiveCommand(new MoveCommand(hit.point), isQueueing);
+                                Vector3 targetPos = hit.point;
+
+                                if (movingUnits.Count > 1)
+                                {
+                                    Vector3 offset = GetSpiralOffset(i, 1.8f);
+                                    Vector3 candidatePos = hit.point + offset;
+
+                                    if (NavMesh.SamplePosition(candidatePos, out NavMeshHit navHit, 3.0f, NavMesh.AllAreas))
+                                    {
+                                        targetPos = navHit.position;
+                                    }
+                                    else
+                                    {
+                                        targetPos = hit.point;
+                                    }
+                                }
+
+                                movingUnits[i].GiveCommand(new MoveCommand(targetPos), isQueueing);
                                 commandIssued = true;
                             }
                         }
@@ -248,6 +286,19 @@ namespace RTSFramework.InputSystem
                     Audio.RTSAudioManager.Instance.PlayVoice(clips);
                 }
             }
+        }
+
+        private Vector3 GetSpiralOffset(int index, float spacing = 1.8f)
+        {
+            if (index == 0) return Vector3.zero;
+
+            // Golden angle in radians (approx 137.5 degrees)
+            float goldenAngle = 137.5f * Mathf.Deg2Rad;
+            // Radius grows with square root of index to distribute units evenly in area
+            float radius = spacing * Mathf.Sqrt(index);
+            float theta = index * goldenAngle;
+
+            return new Vector3(Mathf.Cos(theta) * radius, 0f, Mathf.Sin(theta) * radius);
         }
 
         #region Helper Methods
