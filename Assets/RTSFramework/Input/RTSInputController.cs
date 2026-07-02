@@ -78,7 +78,33 @@ namespace RTSFramework.InputSystem
                         ISelectable selectable = hit.collider.GetComponentInParent<ISelectable>();
                         if (selectable != null)
                         {
-                            SelectionManager.Instance.Select(selectable, !isAccumulating);
+                            // Enemy/non-player units can only be selected individually.
+                            // If we click an enemy unit, we clear any existing selection.
+                            bool isPlayerOwned = true;
+                            if (selectable.GameObject.TryGetComponent<UnitController>(out var unit))
+                            {
+                                isPlayerOwned = unit.IsPlayerOwned;
+                            }
+
+                            if (!isPlayerOwned)
+                            {
+                                SelectionManager.Instance.Select(selectable, true);
+                            }
+                            else
+                            {
+                                // If player unit is selected, but we currently have an enemy selected, we must clear it.
+                                bool hasEnemySelected = false;
+                                foreach (var sel in SelectionManager.Instance.SelectedObjects)
+                                {
+                                    if (sel.GameObject.TryGetComponent<UnitController>(out var selUnit) && !selUnit.IsPlayerOwned)
+                                    {
+                                        hasEnemySelected = true;
+                                        break;
+                                    }
+                                }
+
+                                SelectionManager.Instance.Select(selectable, !isAccumulating || hasEnemySelected);
+                            }
                         }
                         else
                         {
@@ -92,7 +118,7 @@ namespace RTSFramework.InputSystem
                 }
                 else
                 {
-                    // Box Selection
+                    // Box Selection (Only targets player-owned units)
                     Bounds viewportBounds = GetViewportBounds(mainCamera, dragStartPosition, dragEndPosition);
                     
                     if (!isAccumulating)
@@ -107,7 +133,13 @@ namespace RTSFramework.InputSystem
                         Vector3 viewportPos = mainCamera.WorldToViewportPoint(selectable.Transform.position);
                         if (viewportBounds.Contains(viewportPos))
                         {
-                            SelectionManager.Instance.Select(selectable, false);
+                            if (selectable.GameObject.TryGetComponent<UnitController>(out var unit))
+                            {
+                                if (unit.IsPlayerOwned)
+                                {
+                                    SelectionManager.Instance.Select(selectable, false);
+                                }
+                            }
                         }
                     }
                 }
