@@ -1,5 +1,8 @@
 using UnityEngine;
 using RTSFramework.Resources;
+using RTSFramework.Selection;
+using RTSFramework.Units;
+using RTSFramework.Commands;
 
 namespace RTSFramework.Buildings
 {
@@ -11,8 +14,13 @@ namespace RTSFramework.Buildings
         [SerializeField] private LayerMask terrainLayer;
         [SerializeField] private LayerMask obstacleLayer;
 
+        [Header("Placement Settings")]
+        [SerializeField] private float gridSnapSize = 0.25f;
+
         private GameObject ghostInstance;
         private BuildingData currentBuildingData;
+
+        public bool IsPlacing => ghostInstance != null;
 
         private void Awake()
         {
@@ -46,13 +54,16 @@ namespace RTSFramework.Buildings
             Ray ray = Camera.main.ScreenPointToRay(mouse.position.ReadValue());
             if (Physics.Raycast(ray, out RaycastHit hit, 1000f, terrainLayer))
             {
-                Vector3 snappedPos = SnapToGrid(hit.point, currentBuildingData.GridSize);
+                Vector3 snappedPos = SnapToGrid(hit.point, gridSnapSize);
                 ghostInstance.transform.position = snappedPos;
 
                 bool canPlace = CanPlace(snappedPos, currentBuildingData);
                 UpdateGhostVisuals(canPlace);
 
-                if (mouse.leftButton.wasPressedThisFrame && canPlace)
+                var eventSystem = UnityEngine.EventSystems.EventSystem.current;
+                bool isOverUI = eventSystem != null && eventSystem.IsPointerOverGameObject();
+
+                if (mouse.leftButton.wasPressedThisFrame && canPlace && !isOverUI)
                 {
                     PlaceBuilding(snappedPos);
                 }
@@ -77,15 +88,34 @@ namespace RTSFramework.Buildings
             if (!ResourceManager.Instance.HasResources(data.Cost)) return false;
 
             // 2. Check if the spot is blocked by obstacles (units, other buildings)
-            // We do a box overlap slightly smaller than the grid size to avoid false collisions with adjacent grid cells
             float checkSize = data.GridSize * 0.95f;
             Vector3 halfExtents = new Vector3(checkSize / 2f, 0.5f, checkSize / 2f);
-            
-            // Check from slightly above the ground
             Vector3 checkCenter = position + Vector3.up * 0.5f;
 
             Collider[] colliders = Physics.OverlapBox(checkCenter, halfExtents, Quaternion.identity, obstacleLayer);
-            return colliders.Length == 0;
+            foreach (var col in colliders)
+            {
+                // Ignore the ground/terrain
+                if (col.gameObject.name.Contains("Ground") || col.gameObject.name.Contains("Terrain") || col.GetComponent<Terrain>() != null)
+                {
+                    continue;
+                }
+                // Ignore triggers (selection rings, ghost visual zones)
+                if (col.isTrigger)
+                {
+                    continue;
+                }
+                // Ignore ourselves (the ghost instance, if it has a collider)
+                if (ghostInstance != null && (col.gameObject == ghostInstance || col.transform.IsChildOf(ghostInstance.transform)))
+                {
+                    continue;
+                }
+                
+                // Found a real obstacle!
+                return false;
+            }
+
+            return true;
         }
 
         private void PlaceBuilding(Vector3 position)
@@ -101,6 +131,19 @@ namespace RTSFramework.Buildings
                 if (building != null)
                 {
                     building.Initialize(currentBuildingData);
+
+                    // Send selected builder units to construct the placed foundation
+                    foreach (var selected in SelectionManager.Instance.SelectedObjects)
+                    {
+                        if (selected == null || selected.Equals(null)) continue;
+                        if (selected.GameObject.TryGetComponent<UnitController>(out var unit))
+                        {
+                            if (unit.IsPlayerOwned && unit.GetComponent<BuilderComponent>() != null)
+                            {
+                                unit.GiveCommand(new BuildCommand(building), false);
+                            }
+                        }
+                    }
                 }
 
                 // If Shift is NOT held, exit placement mode

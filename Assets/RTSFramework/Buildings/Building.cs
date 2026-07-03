@@ -35,13 +35,11 @@ namespace RTSFramework.Buildings
             ToggleFunctionality(false);
         }
 
-        private void Update()
+        public void Construct(float amount)
         {
             if (isConstructed) return;
 
-            // Simple self-construction over time
-            // (This can easily be expanded to require workers nearby)
-            constructionProgress += Time.deltaTime / buildingData.ConstructionTime;
+            constructionProgress += amount;
             constructionProgress = Mathf.Clamp01(constructionProgress);
 
             OnConstructionProgressChanged?.Invoke(constructionProgress);

@@ -21,3 +21,6 @@ MonoBehaviour:
   selectionPriority: 50
   selectVoices: []
   commandVoices: []
+  canBuild: 1
+  buildableBuildings:
+  - {fileID: 11400000, guid: ce8c23efc9a08294e96b810ec25051c9, type: 2}

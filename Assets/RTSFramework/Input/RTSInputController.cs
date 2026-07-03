@@ -5,6 +5,7 @@ using UnityEngine.AI;
 using RTSFramework.Selection;
 using RTSFramework.Units;
 using RTSFramework.Commands;
+using RTSFramework.Buildings;
 using RTSFramework.Combat;
 using RTSFramework.Resources;
 
@@ -53,6 +54,12 @@ namespace RTSFramework.InputSystem
         {
             if (mainCamera == null) return;
 
+            // Placement mode: disable selection and command input
+            if (BuildingSystem.Instance != null && BuildingSystem.Instance.IsPlacing)
+            {
+                return;
+            }
+
             var mouse = Mouse.current;
             var keyboard = Keyboard.current;
             if (mouse == null) return;
@@ -60,8 +67,12 @@ namespace RTSFramework.InputSystem
             // --- SELECTION (Left Click & Drag) ---
             if (mouse.leftButton.wasPressedThisFrame)
             {
-                isDragging = true;
-                dragStartPosition = mouse.position.ReadValue();
+                var eventSystem = UnityEngine.EventSystems.EventSystem.current;
+                if (eventSystem == null || !eventSystem.IsPointerOverGameObject())
+                {
+                    isDragging = true;
+                    dragStartPosition = mouse.position.ReadValue();
+                }
             }
 
             if (mouse.leftButton.wasReleasedThisFrame && isDragging)
@@ -153,6 +164,11 @@ namespace RTSFramework.InputSystem
             // --- COMMANDS (Right Click) ---
             if (mouse.rightButton.wasPressedThisFrame)
             {
+                var eventSystem = UnityEngine.EventSystems.EventSystem.current;
+                if (eventSystem != null && eventSystem.IsPointerOverGameObject())
+                {
+                    return;
+                }
                 Ray ray = mainCamera.ScreenPointToRay(mouse.position.ReadValue());
                 if (Physics.Raycast(ray, out RaycastHit hit, 1000f))
                 {
@@ -162,6 +178,8 @@ namespace RTSFramework.InputSystem
                     ResourceSource targetSource = hit.collider.GetComponentInParent<ResourceSource>();
                     // Check if we hit a unit/entity with a Health component
                     Health targetHealth = hit.collider.GetComponentInParent<Health>();
+                    // Check if we hit a building
+                    Building targetBuilding = hit.collider.GetComponentInParent<Building>();
 
                     bool commandIssued = false;
 
@@ -188,6 +206,24 @@ namespace RTSFramework.InputSystem
                             {
                                 unit.GiveCommand(new GatherCommand(targetSource), isQueueing);
                                 commandIssued = true;
+                            }
+                        }
+                        else if (targetBuilding != null && !targetBuilding.IsConstructed)
+                        {
+                            // Construct under-construction building
+                            foreach (var unit in movingUnits)
+                            {
+                                if (unit.GetComponent<BuilderComponent>() != null)
+                                {
+                                    unit.GiveCommand(new BuildCommand(targetBuilding), isQueueing);
+                                    commandIssued = true;
+                                }
+                                else
+                                {
+                                    // Move near the building for non-builders to stand guard
+                                    unit.GiveCommand(new MoveCommand(hit.point), isQueueing);
+                                    commandIssued = true;
+                                }
                             }
                         }
                         else if (targetHealth != null)

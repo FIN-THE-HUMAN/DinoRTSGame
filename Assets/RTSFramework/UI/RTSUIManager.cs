@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using TMPro;
 using RTSFramework.Selection;
 using RTSFramework.Units;
+using RTSFramework.Buildings;
 
 namespace RTSFramework.UI
 {
@@ -16,6 +17,10 @@ namespace RTSFramework.UI
         [SerializeField] private Image portraitImage;
         [SerializeField] private TMP_Text unitNameText;
         [SerializeField] private TMP_Text unitCountText;
+
+        [Header("Build HUD UI")]
+        [SerializeField] private GameObject buildPanel;
+        [SerializeField] private GameObject buildButtonPrefab;
 
         private void Awake()
         {
@@ -66,6 +71,10 @@ namespace RTSFramework.UI
             if (selectedUnits.Count == 0)
             {
                 selectionPanel.SetActive(false);
+                if (buildPanel != null)
+                {
+                    buildPanel.SetActive(false);
+                }
                 return;
             }
 
@@ -105,6 +114,53 @@ namespace RTSFramework.UI
                     // If no icon, hide the portrait container
                     portraitImage.sprite = null;
                     portraitImage.gameObject.SetActive(false);
+                }
+            }
+
+            // --- BUILD PANEL POPULATION ---
+            // Clear existing build buttons
+            if (buildPanel != null)
+            {
+                foreach (Transform child in buildPanel.transform)
+                {
+                    Destroy(child.gameObject);
+                }
+            }
+
+            var builder = leadUnit.GetComponent<BuilderComponent>();
+            if (builder != null && buildPanel != null && buildButtonPrefab != null)
+            {
+                buildPanel.SetActive(true);
+                foreach (var bData in builder.BuildableBuildings)
+                {
+                    if (bData == null) continue;
+
+                    GameObject buttonObj = Instantiate(buildButtonPrefab, buildPanel.transform);
+                    var text = buttonObj.GetComponentInChildren<TMP_Text>();
+                    if (text != null)
+                    {
+                        text.text = bData.BuildingName;
+                    }
+
+                    var button = buttonObj.GetComponent<Button>();
+                    if (button != null)
+                    {
+                        var data = bData;
+                        button.onClick.AddListener(() =>
+                        {
+                            if (BuildingSystem.Instance != null)
+                            {
+                                BuildingSystem.Instance.StartPlacement(data);
+                            }
+                        });
+                    }
+                }
+            }
+            else
+            {
+                if (buildPanel != null)
+                {
+                    buildPanel.SetActive(false);
                 }
             }
         }
