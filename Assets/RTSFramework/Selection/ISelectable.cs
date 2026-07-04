@@ -6,6 +6,7 @@ namespace RTSFramework.Selection
     {
         Transform Transform { get; }
         GameObject GameObject { get; }
+        bool IsPlayerOwned { get; }
         void Select();
         void Deselect();
     }

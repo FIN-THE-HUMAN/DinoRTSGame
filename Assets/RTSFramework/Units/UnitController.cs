@@ -132,5 +132,10 @@ namespace RTSFramework.Units
                 selectionVisual.SetActive(false);
             }
         }
+
+        public void SetFaction(Factions.Faction newFaction)
+        {
+            this.faction = newFaction;
+        }
     }
 }

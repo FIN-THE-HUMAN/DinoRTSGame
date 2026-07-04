@@ -22,6 +22,13 @@ namespace RTSFramework.UI
         [SerializeField] private GameObject buildPanel;
         [SerializeField] private GameObject buildButtonPrefab;
 
+        [Header("Production HUD UI")]
+        [SerializeField] private GameObject productionPanel;
+        [SerializeField] private GameObject productionButtonPrefab;
+        [SerializeField] private Slider productionProgressBar;
+
+        private UnitProductionComponent activeProducer;
+
         private void Awake()
         {
             if (Instance == null)
@@ -51,46 +58,78 @@ namespace RTSFramework.UI
             }
         }
 
+        private void Update()
+        {
+            if (activeProducer != null && productionProgressBar != null)
+            {
+                bool hasQueue = activeProducer.QueueCount > 0;
+                productionProgressBar.gameObject.SetActive(hasQueue);
+                if (hasQueue)
+                {
+                    productionProgressBar.value = activeProducer.TrainingProgress;
+                }
+            }
+        }
+
         public void UpdateSelectionUI()
         {
             if (selectionPanel == null) return;
 
             var selectedObjects = SelectionManager.Instance.SelectedObjects;
 
-            // Find all selected UnitControllers
-            List<UnitController> selectedUnits = new List<UnitController>();
-            foreach (var selected in selectedObjects)
-            {
-                if (selected == null || selected.Equals(null)) continue;
-                if (selected.GameObject.TryGetComponent<UnitController>(out var unit))
-                {
-                    selectedUnits.Add(unit);
-                }
-            }
-
-            if (selectedUnits.Count == 0)
+            if (selectedObjects.Count == 0)
             {
                 selectionPanel.SetActive(false);
-                if (buildPanel != null)
-                {
-                    buildPanel.SetActive(false);
-                }
+                if (buildPanel != null) buildPanel.SetActive(false);
+                if (productionPanel != null) productionPanel.SetActive(false);
+                activeProducer = null;
                 return;
             }
 
-            // Find the "lead" unit based on selection priority (highest priority wins)
-            UnitController leadUnit = SelectionManager.Instance.GetLeadSelectedUnit();
-
-            // If no unit has UnitData, default to the first one
-            if (leadUnit == null)
+            // Find the "lead" selectable object (prefer units over buildings, or just take the first selected)
+            ISelectable leadSelectable = null;
+            foreach (var sel in selectedObjects)
             {
-                leadUnit = selectedUnits[0];
+                if (sel == null || sel.Equals(null)) continue;
+                if (sel.GameObject.GetComponent<UnitController>() != null)
+                {
+                    leadSelectable = sel;
+                    break;
+                }
             }
 
-            string leadName = leadUnit.UnitData != null ? leadUnit.UnitData.UnitName : leadUnit.name;
+            if (leadSelectable == null && selectedObjects.Count > 0)
+            {
+                leadSelectable = selectedObjects[0];
+            }
 
-            // Update UI elements
+            if (leadSelectable == null || leadSelectable.Equals(null))
+            {
+                selectionPanel.SetActive(false);
+                if (buildPanel != null) buildPanel.SetActive(false);
+                if (productionPanel != null) productionPanel.SetActive(false);
+                activeProducer = null;
+                return;
+            }
+
             selectionPanel.SetActive(true);
+
+            // Determine display details
+            string leadName = leadSelectable.GameObject.name;
+            Sprite leadIcon = null;
+
+            var unit = leadSelectable.GameObject.GetComponent<UnitController>();
+            var building = leadSelectable.GameObject.GetComponent<Building>();
+
+            if (unit != null)
+            {
+                leadName = unit.UnitData != null ? unit.UnitData.UnitName : unit.gameObject.name;
+                leadIcon = unit.UnitData != null ? unit.UnitData.UnitIcon : null;
+            }
+            else if (building != null)
+            {
+                leadName = building.BuildingData != null ? building.BuildingData.BuildingName : building.gameObject.name;
+            }
 
             if (unitNameText != null)
             {
@@ -99,26 +138,39 @@ namespace RTSFramework.UI
 
             if (unitCountText != null)
             {
-                unitCountText.text = selectedUnits.Count > 1 ? $"x{selectedUnits.Count}" : "";
+                if (selectedObjects.Count > 1)
+                {
+                    unitCountText.text = $"x{selectedObjects.Count}";
+                }
+                else
+                {
+                    var health = leadSelectable.GameObject.GetComponent<Combat.Health>();
+                    if (health != null)
+                    {
+                        unitCountText.text = $"HP: {health.CurrentHealth} / {health.MaxHealth}";
+                    }
+                    else
+                    {
+                        unitCountText.text = "";
+                    }
+                }
             }
 
             if (portraitImage != null)
             {
-                if (leadUnit.UnitData != null && leadUnit.UnitData.UnitIcon != null)
+                if (leadIcon != null)
                 {
                     portraitImage.gameObject.SetActive(true);
-                    portraitImage.sprite = leadUnit.UnitData.UnitIcon;
+                    portraitImage.sprite = leadIcon;
                 }
                 else
                 {
-                    // If no icon, hide the portrait container
                     portraitImage.sprite = null;
                     portraitImage.gameObject.SetActive(false);
                 }
             }
 
             // --- BUILD PANEL POPULATION ---
-            // Clear existing build buttons
             if (buildPanel != null)
             {
                 foreach (Transform child in buildPanel.transform)
@@ -127,7 +179,7 @@ namespace RTSFramework.UI
                 }
             }
 
-            var builder = leadUnit.GetComponent<BuilderComponent>();
+            var builder = leadSelectable.GameObject.GetComponent<BuilderComponent>();
             if (builder != null && buildPanel != null && buildButtonPrefab != null)
             {
                 buildPanel.SetActive(true);
@@ -161,6 +213,55 @@ namespace RTSFramework.UI
                 if (buildPanel != null)
                 {
                     buildPanel.SetActive(false);
+                }
+            }
+
+            // --- PRODUCTION PANEL POPULATION ---
+            var producer = leadSelectable.GameObject.GetComponent<UnitProductionComponent>();
+            bool isPlayerOwnedBuilding = leadSelectable.IsPlayerOwned && building != null;
+
+            if (producer != null && isPlayerOwnedBuilding && productionPanel != null && productionButtonPrefab != null)
+            {
+                activeProducer = producer;
+                productionPanel.SetActive(true);
+
+                // Clear existing train buttons
+                foreach (Transform child in productionPanel.transform)
+                {
+                    if (child.gameObject.GetComponent<Button>() != null)
+                    {
+                        Destroy(child.gameObject);
+                    }
+                }
+
+                foreach (var trainable in producer.TrainableUnits)
+                {
+                    if (trainable == null) continue;
+
+                    GameObject btnObj = Instantiate(productionButtonPrefab, productionPanel.transform);
+                    var text = btnObj.GetComponentInChildren<TMP_Text>();
+                    if (text != null)
+                    {
+                        text.text = trainable.UnitName;
+                    }
+
+                    var button = btnObj.GetComponent<Button>();
+                    if (button != null)
+                    {
+                        var data = trainable;
+                        button.onClick.AddListener(() =>
+                        {
+                            producer.TryQueueUnit(data);
+                        });
+                    }
+                }
+            }
+            else
+            {
+                activeProducer = null;
+                if (productionPanel != null)
+                {
+                    productionPanel.SetActive(false);
                 }
             }
         }

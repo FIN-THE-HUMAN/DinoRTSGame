@@ -16,11 +16,8 @@ MonoBehaviour:
   maxHealth: 100
   trainingTime: 5
   cost: []
-  unitPrefab: {fileID: 0}
+  unitPrefab: {fileID: 4522815075678181838, guid: 70e741ca4c63ebe47a2c87adf14c278a, type: 3}
   unitIcon: {fileID: 0}
   selectionPriority: 50
   selectVoices: []
   commandVoices: []
-  canBuild: 1
-  buildableBuildings:
-  - {fileID: 11400000, guid: ce8c23efc9a08294e96b810ec25051c9, type: 2}

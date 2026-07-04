@@ -91,25 +91,17 @@ namespace RTSFramework.InputSystem
                         ISelectable selectable = hit.collider.GetComponentInParent<ISelectable>();
                         if (selectable != null)
                         {
-                            // Enemy/non-player units can only be selected individually.
-                            // If we click an enemy unit, we clear any existing selection.
-                            bool isPlayerOwned = true;
-                            if (selectable.GameObject.TryGetComponent<UnitController>(out var unit))
-                            {
-                                isPlayerOwned = unit.IsPlayerOwned;
-                            }
-
-                            if (!isPlayerOwned)
+                            if (!selectable.IsPlayerOwned)
                             {
                                 SelectionManager.Instance.Select(selectable, true);
                             }
                             else
                             {
-                                // If player unit is selected, but we currently have an enemy selected, we must clear it.
+                                // If player object is selected, but we currently have an enemy selected, we must clear it.
                                 bool hasEnemySelected = false;
                                 foreach (var sel in SelectionManager.Instance.SelectedObjects)
                                 {
-                                    if (sel.GameObject.TryGetComponent<UnitController>(out var selUnit) && !selUnit.IsPlayerOwned)
+                                    if (!sel.IsPlayerOwned)
                                     {
                                         hasEnemySelected = true;
                                         break;
