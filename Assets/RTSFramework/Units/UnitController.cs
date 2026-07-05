@@ -35,6 +35,25 @@ namespace RTSFramework.Units
         private void Start()
         {
             Deselect();
+            ApplyFactionColor();
+        }
+
+        private void ApplyFactionColor()
+        {
+            if (selectionVisual == null) return;
+            var renderer = selectionVisual.GetComponent<Renderer>();
+            if (renderer == null) return;
+
+            Shader spritesShader = Shader.Find("Sprites/Default");
+            if (spritesShader == null) spritesShader = Shader.Find("Unlit/Color");
+            if (spritesShader == null) spritesShader = Shader.Find("Standard");
+
+            if (spritesShader != null)
+            {
+                Material mat = new Material(spritesShader);
+                mat.color = IsPlayerOwned ? Color.green : Color.red;
+                renderer.sharedMaterial = mat;
+            }
         }
 
         private void Update()

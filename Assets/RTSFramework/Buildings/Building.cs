@@ -3,6 +3,7 @@ using UnityEngine;
 using RTSFramework.Combat;
 using RTSFramework.Selection;
 using RTSFramework.Factions;
+using UnityEngine.AI;
 
 namespace RTSFramework.Buildings
 {
@@ -36,12 +37,58 @@ namespace RTSFramework.Buildings
         private void Awake()
         {
             health = GetComponent<Health>();
+            SetupNavMeshObstacle();
+        }
+
+        private void SetupNavMeshObstacle()
+        {
+            var obstacle = GetComponent<NavMeshObstacle>();
+            if (obstacle == null)
+            {
+                obstacle = gameObject.AddComponent<NavMeshObstacle>();
+            }
+
+            obstacle.carving = true;
+            obstacle.carveOnlyStationary = true;
+            obstacle.shape = NavMeshObstacleShape.Box;
+
+            var boxCol = GetComponent<BoxCollider>();
+            if (boxCol != null)
+            {
+                obstacle.center = boxCol.center;
+                obstacle.size = boxCol.size;
+            }
+            else
+            {
+                float sizeVal = buildingData != null ? buildingData.GridSize : 3f;
+                obstacle.center = Vector3.zero;
+                obstacle.size = new Vector3(sizeVal, 2f, sizeVal);
+            }
         }
 
         private void Start()
         {
             SelectionManager.RegisterSelectable(this);
             Deselect();
+            ApplyFactionColor();
+        }
+
+        private void ApplyFactionColor()
+        {
+            if (selectionVisual == null) return;
+            var renderer = selectionVisual.GetComponent<Renderer>();
+            if (renderer == null) return;
+
+            Shader spritesShader = Shader.Find("Sprites/Default");
+            if (spritesShader == null) spritesShader = Shader.Find("Unlit/Color");
+            if (spritesShader == null) spritesShader = Shader.Find("Standard");
+
+            if (spritesShader != null)
+            {
+                Material mat = new Material(spritesShader);
+                mat.color = IsPlayerOwned ? Color.green : Color.red;
+                renderer.sharedMaterial = mat;
+            }
         }
 
         private void OnDestroy()

@@ -47,6 +47,14 @@ namespace RTSFramework.UI
             {
                 SelectionManager.Instance.OnSelectionChanged += UpdateSelectionUI;
             }
+
+            if (productionProgressBar != null)
+            {
+                var layout = productionProgressBar.GetComponent<LayoutElement>();
+                if (layout == null) layout = productionProgressBar.gameObject.AddComponent<LayoutElement>();
+                layout.ignoreLayout = true;
+            }
+
             UpdateSelectionUI();
         }
 
@@ -67,6 +75,13 @@ namespace RTSFramework.UI
                 if (hasQueue)
                 {
                     productionProgressBar.value = activeProducer.TrainingProgress;
+
+                    // Update queue count text inside the slider if present
+                    var txt = productionProgressBar.GetComponentInChildren<TMP_Text>();
+                    if (txt != null)
+                    {
+                        txt.text = $"Queue: {activeProducer.QueueCount}";
+                    }
                 }
             }
         }

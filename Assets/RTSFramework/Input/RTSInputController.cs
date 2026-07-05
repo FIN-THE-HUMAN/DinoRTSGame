@@ -166,6 +166,21 @@ namespace RTSFramework.InputSystem
                 {
                     bool isQueueing = keyboard != null && (keyboard.shiftKey.isPressed || keyboard.leftShiftKey.isPressed);
 
+                    // Check if we have a single player-owned production building selected
+                    if (SelectionManager.Instance != null && SelectionManager.Instance.SelectedObjects.Count == 1)
+                    {
+                        var firstSelected = SelectionManager.Instance.SelectedObjects[0];
+                        if (firstSelected != null && !firstSelected.Equals(null))
+                        {
+                            var producer = firstSelected.GameObject.GetComponent<Buildings.UnitProductionComponent>();
+                            if (producer != null && firstSelected.IsPlayerOwned)
+                            {
+                                producer.SetRallyPoint(hit.point);
+                                return;
+                            }
+                        }
+                    }
+
                     // Check if we hit a resource source
                     ResourceSource targetSource = hit.collider.GetComponentInParent<ResourceSource>();
                     // Check if we hit a unit/entity with a Health component
