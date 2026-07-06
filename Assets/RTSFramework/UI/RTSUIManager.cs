@@ -50,9 +50,37 @@ namespace RTSFramework.UI
 
             if (productionProgressBar != null)
             {
+                // Ensure LayoutElement ignores Grid Layout Group
                 var layout = productionProgressBar.GetComponent<LayoutElement>();
                 if (layout == null) layout = productionProgressBar.gameObject.AddComponent<LayoutElement>();
                 layout.ignoreLayout = true;
+
+                // Force horizontal stretch anchored at the bottom of the ProductionPanel
+                var rt = productionProgressBar.GetComponent<RectTransform>();
+                if (rt != null)
+                {
+                    rt.anchorMin = new Vector2(0f, 0f);
+                    rt.anchorMax = new Vector2(1f, 0f);
+                    rt.pivot = new Vector2(0.5f, 0f);
+                    rt.anchoredPosition = new Vector2(0f, 2f); // 2px margin from bottom
+                    rt.sizeDelta = new Vector2(-10f, 15f); // 15px height, inset by 5px left/right
+                    rt.localScale = Vector3.one;
+                }
+
+                // Force correct layout for child text (Queue: X) to stretch across the slider
+                Transform txtTrans = productionProgressBar.transform.Find("QueueText");
+                if (txtTrans != null)
+                {
+                    var txtRt = txtTrans.GetComponent<RectTransform>();
+                    if (txtRt != null)
+                    {
+                        txtRt.anchorMin = Vector2.zero;
+                        txtRt.anchorMax = Vector2.one;
+                        txtRt.sizeDelta = Vector2.zero;
+                        txtRt.anchoredPosition = Vector2.zero;
+                        txtRt.localScale = Vector3.one;
+                    }
+                }
             }
 
             UpdateSelectionUI();

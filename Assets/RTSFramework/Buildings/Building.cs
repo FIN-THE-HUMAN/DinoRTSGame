@@ -18,7 +18,9 @@ namespace RTSFramework.Buildings
         [SerializeField] private float constructionProgress; // 0 to 1
         [SerializeField] private bool isConstructed;
 
-        private BuildingData buildingData;
+        [Header("Config")]
+        [SerializeField] private BuildingData buildingData;
+
         private Health health;
 
         public event Action<float> OnConstructionProgressChanged; // 0 to 1
@@ -38,6 +40,43 @@ namespace RTSFramework.Buildings
         {
             health = GetComponent<Health>();
             SetupNavMeshObstacle();
+            SetupSelectionVisual();
+        }
+
+        private void SetupSelectionVisual()
+        {
+            if (selectionVisual == null)
+            {
+                Transform existing = transform.Find("SelectionVisual");
+                if (existing != null)
+                {
+                    selectionVisual = existing.gameObject;
+                }
+                else
+                {
+                    GameObject selVisualObj = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                    selVisualObj.name = "SelectionVisual";
+                    selVisualObj.transform.SetParent(transform, false);
+
+                    var boxCol = GetComponent<BoxCollider>();
+                    float bottomY = boxCol != null ? (boxCol.center.y - boxCol.size.y / 2f) + 0.02f : 0.02f;
+                    selVisualObj.transform.localPosition = new Vector3(0f, bottomY, 0f);
+                    selVisualObj.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+
+                    float sizeVal = buildingData != null ? buildingData.GridSize * 1.5f : 4.5f;
+                    selVisualObj.transform.localScale = new Vector3(sizeVal, sizeVal, 1f);
+
+                    Destroy(selVisualObj.GetComponent<Collider>());
+
+                    selectionVisual = selVisualObj;
+                }
+            }
+        }
+
+        public void SetFaction(Faction newFaction)
+        {
+            this.faction = newFaction;
+            ApplyFactionColor();
         }
 
         private void SetupNavMeshObstacle()

@@ -55,7 +55,12 @@ namespace RTSFramework.Buildings
             if (Physics.Raycast(ray, out RaycastHit hit, 1000f, terrainLayer))
             {
                 Vector3 snappedPos = SnapToGrid(hit.point, gridSnapSize);
-                ghostInstance.transform.position = snappedPos;
+                
+                // Add vertical Y offset from the prefab definition to keep the building's base on the ground
+                float yOffset = currentBuildingData != null && currentBuildingData.BuildingPrefab != null ? 
+                    currentBuildingData.BuildingPrefab.transform.position.y : 0f;
+                
+                ghostInstance.transform.position = snappedPos + Vector3.up * yOffset;
 
                 bool canPlace = CanPlace(snappedPos, currentBuildingData);
                 UpdateGhostVisuals(canPlace);
@@ -65,7 +70,7 @@ namespace RTSFramework.Buildings
 
                 if (mouse.leftButton.wasPressedThisFrame && canPlace && !isOverUI)
                 {
-                    PlaceBuilding(snappedPos);
+                    PlaceBuilding(snappedPos + Vector3.up * yOffset);
                 }
             }
 
@@ -131,6 +136,13 @@ namespace RTSFramework.Buildings
                 if (building != null)
                 {
                     building.Initialize(currentBuildingData);
+                    
+                    // Assign player faction dynamically
+                    Factions.Faction playerFaction = GetPlayerFaction();
+                    if (playerFaction != null)
+                    {
+                        building.SetFaction(playerFaction);
+                    }
 
                     // Send selected builder units to construct the placed foundation
                     foreach (var selected in SelectionManager.Instance.SelectedObjects)
@@ -187,6 +199,27 @@ namespace RTSFramework.Buildings
                 Destroy(ghostInstance);
             }
             currentBuildingData = null;
+        }
+
+        private Factions.Faction GetPlayerFaction()
+        {
+            // 1. Try to find the player faction from existing scene buildings
+            foreach (var b in FindObjectsOfType<Building>())
+            {
+                if (b != null && b.Faction != null && b.Faction.IsPlayerFaction)
+                {
+                    return b.Faction;
+                }
+            }
+            // 2. Try to find the player faction from units
+            foreach (var u in FindObjectsOfType<UnitController>())
+            {
+                if (u != null && u.Faction != null && u.Faction.IsPlayerFaction)
+                {
+                    return u.Faction;
+                }
+            }
+            return null;
         }
     }
 }
