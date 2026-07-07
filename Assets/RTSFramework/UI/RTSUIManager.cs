@@ -92,6 +92,7 @@ namespace RTSFramework.UI
             {
                 SelectionManager.Instance.OnSelectionChanged -= UpdateSelectionUI;
             }
+            SubscribeToHealth(null);
         }
 
         private void Update()
@@ -183,16 +184,14 @@ namespace RTSFramework.UI
             {
                 if (selectedObjects.Count > 1)
                 {
+                    SubscribeToHealth(null);
                     unitCountText.text = $"x{selectedObjects.Count}";
                 }
                 else
                 {
                     var health = leadSelectable.GameObject.GetComponent<Combat.Health>();
-                    if (health != null)
-                    {
-                        unitCountText.text = $"HP: {health.CurrentHealth} / {health.MaxHealth}";
-                    }
-                    else
+                    SubscribeToHealth(health);
+                    if (health == null)
                     {
                         unitCountText.text = "";
                     }
@@ -306,6 +305,32 @@ namespace RTSFramework.UI
                 {
                     productionPanel.SetActive(false);
                 }
+            }
+        }
+
+        private Combat.Health currentSelectedHealth;
+
+        private void SubscribeToHealth(Combat.Health newHealth)
+        {
+            if (currentSelectedHealth != null)
+            {
+                currentSelectedHealth.OnHealthChanged -= HandleSelectedHealthChanged;
+            }
+
+            currentSelectedHealth = newHealth;
+
+            if (currentSelectedHealth != null)
+            {
+                currentSelectedHealth.OnHealthChanged += HandleSelectedHealthChanged;
+                HandleSelectedHealthChanged(currentSelectedHealth.CurrentHealth, currentSelectedHealth.MaxHealth);
+            }
+        }
+
+        private void HandleSelectedHealthChanged(float current, float max)
+        {
+            if (unitCountText != null && SelectionManager.Instance != null && SelectionManager.Instance.SelectedObjects.Count == 1)
+            {
+                unitCountText.text = $"HP: {Mathf.RoundToInt(current)} / {Mathf.RoundToInt(max)}";
             }
         }
     }
