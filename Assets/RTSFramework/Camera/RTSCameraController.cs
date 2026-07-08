@@ -45,6 +45,14 @@ namespace RTSFramework.CameraSystem
 
         private void HandleInputs()
         {
+            if (RTSFramework.Input.RTSCheatConsole.Instance != null && RTSFramework.Input.RTSCheatConsole.Instance.IsOpen)
+            {
+                inputDirection = Vector3.zero;
+                zoomInput = 0f;
+                rotationInput = 0f;
+                return;
+            }
+
             // Keyboard Movement
             float x = 0f;
             float z = 0f;

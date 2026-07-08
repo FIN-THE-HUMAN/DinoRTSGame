@@ -36,6 +36,23 @@ namespace RTSFramework.Units
         {
             Deselect();
             ApplyFactionColor();
+
+            // Dynamically attach Fog of War components based on ownership
+            if (IsPlayerOwned)
+            {
+                if (GetComponent<RTSFramework.Fog.FogRevealer>() == null)
+                {
+                    var rev = gameObject.AddComponent<RTSFramework.Fog.FogRevealer>();
+                    rev.SightRange = 10f;
+                }
+            }
+            else
+            {
+                if (GetComponent<RTSFramework.Fog.FogReceiver>() == null)
+                {
+                    gameObject.AddComponent<RTSFramework.Fog.FogReceiver>();
+                }
+            }
         }
 
         private void ApplyFactionColor()

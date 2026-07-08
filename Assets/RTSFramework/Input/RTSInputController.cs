@@ -60,6 +60,13 @@ namespace RTSFramework.InputSystem
                 return;
             }
 
+            // Cheat console active: lock selection and command input
+            if (RTSFramework.Input.RTSCheatConsole.Instance != null && RTSFramework.Input.RTSCheatConsole.Instance.IsOpen)
+            {
+                isDragging = false;
+                return;
+            }
+
             var mouse = Mouse.current;
             var keyboard = Keyboard.current;
             if (mouse == null) return;

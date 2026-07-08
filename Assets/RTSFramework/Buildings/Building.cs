@@ -110,6 +110,23 @@ namespace RTSFramework.Buildings
             SelectionManager.RegisterSelectable(this);
             Deselect();
             ApplyFactionColor();
+
+            // Dynamically attach Fog of War components based on ownership
+            if (IsPlayerOwned)
+            {
+                if (GetComponent<RTSFramework.Fog.FogRevealer>() == null)
+                {
+                    var rev = gameObject.AddComponent<RTSFramework.Fog.FogRevealer>();
+                    rev.SightRange = 15f; // Buildings reveal more area than units
+                }
+            }
+            else
+            {
+                if (GetComponent<RTSFramework.Fog.FogReceiver>() == null)
+                {
+                    gameObject.AddComponent<RTSFramework.Fog.FogReceiver>();
+                }
+            }
         }
 
         private void ApplyFactionColor()
