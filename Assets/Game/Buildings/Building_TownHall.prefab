@@ -105,6 +105,7 @@ GameObject:
   - component: {fileID: 2740740927519317435}
   - component: {fileID: 1728194516377653572}
   - component: {fileID: 4647541070327656499}
+  - component: {fileID: 684086748294827021}
   m_Layer: 0
   m_Name: Building_TownHall
   m_TagString: Untagged
@@ -267,6 +268,22 @@ MonoBehaviour:
   queueMaxSize: 5
   defaultRallyDistance: 4
   spawnOffsetDistance: 1.5
+--- !u!114 &684086748294827021
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4938607858621663544}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 136da73b39f7ab649a10fa4c51422c35, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: RTSFramework::RTSFramework.Upgrades.TechnologyResearchComponent
+  researchableUpgrades:
+  - {fileID: 11400000, guid: b30659f3973bf4a4dbccf1e53d448dfe, type: 2}
+  - {fileID: 11400000, guid: bd7a48b463dffa34cb98ad8b23318462, type: 2}
+  queueMaxSize: 5
 --- !u!1 &8599304547673891880
 GameObject:
   m_ObjectHideFlags: 0

@@ -5,6 +5,7 @@ using TMPro;
 using RTSFramework.Selection;
 using RTSFramework.Units;
 using RTSFramework.Buildings;
+using RTSFramework.Upgrades;
 
 namespace RTSFramework.UI
 {
@@ -28,6 +29,7 @@ namespace RTSFramework.UI
         [SerializeField] private Slider productionProgressBar;
 
         private UnitProductionComponent activeProducer;
+        private TechnologyResearchComponent activeResearcher;
 
         private void Awake()
         {
@@ -83,6 +85,11 @@ namespace RTSFramework.UI
                 }
             }
 
+            if (UpgradeManager.Instance != null)
+            {
+                UpgradeManager.Instance.OnUpgradeCompleted += HandleGlobalUpgradeCompleted;
+            }
+
             UpdateSelectionUI();
         }
 
@@ -92,25 +99,42 @@ namespace RTSFramework.UI
             {
                 SelectionManager.Instance.OnSelectionChanged -= UpdateSelectionUI;
             }
+            if (UpgradeManager.Instance != null)
+            {
+                UpgradeManager.Instance.OnUpgradeCompleted -= HandleGlobalUpgradeCompleted;
+            }
             SubscribeToHealth(null);
         }
 
         private void Update()
         {
-            if (activeProducer != null && productionProgressBar != null)
-            {
-                bool hasQueue = activeProducer.QueueCount > 0;
-                productionProgressBar.gameObject.SetActive(hasQueue);
-                if (hasQueue)
-                {
-                    productionProgressBar.value = activeProducer.TrainingProgress;
+            if (productionProgressBar == null) return;
 
-                    // Update queue count text inside the slider if present
-                    var txt = productionProgressBar.GetComponentInChildren<TMP_Text>();
-                    if (txt != null)
-                    {
-                        txt.text = $"Queue: {activeProducer.QueueCount}";
-                    }
+            bool showProgress = false;
+            float progressVal = 0f;
+            string progressText = "";
+
+            if (activeProducer != null && activeProducer.QueueCount > 0)
+            {
+                showProgress = true;
+                progressVal = activeProducer.TrainingProgress;
+                progressText = $"Queue: {activeProducer.QueueCount} (Training: {activeProducer.CurrentActiveUnit.UnitName})";
+            }
+            else if (activeResearcher != null && activeResearcher.QueueCount > 0)
+            {
+                showProgress = true;
+                progressVal = activeResearcher.ResearchProgress;
+                progressText = $"Queue: {activeResearcher.QueueCount} (Researching: {activeResearcher.CurrentActiveResearch.UpgradeName})";
+            }
+
+            productionProgressBar.gameObject.SetActive(showProgress);
+            if (showProgress)
+            {
+                productionProgressBar.value = progressVal;
+                var txt = productionProgressBar.GetComponentInChildren<TMP_Text>();
+                if (txt != null)
+                {
+                    txt.text = progressText;
                 }
             }
         }
@@ -258,16 +282,18 @@ namespace RTSFramework.UI
                 }
             }
 
-            // --- PRODUCTION PANEL POPULATION ---
+            // --- PRODUCTION / RESEARCH PANEL POPULATION ---
             var producer = leadSelectable.GameObject.GetComponent<UnitProductionComponent>();
+            var researcher = leadSelectable.GameObject.GetComponent<TechnologyResearchComponent>();
             bool isPlayerOwnedBuilding = leadSelectable.IsPlayerOwned && building != null;
 
-            if (producer != null && isPlayerOwnedBuilding && productionPanel != null && productionButtonPrefab != null)
+            if ((producer != null || researcher != null) && isPlayerOwnedBuilding && productionPanel != null && productionButtonPrefab != null)
             {
                 activeProducer = producer;
+                activeResearcher = researcher;
                 productionPanel.SetActive(true);
 
-                // Clear existing train buttons
+                // Clear existing buttons
                 foreach (Transform child in productionPanel.transform)
                 {
                     if (child.gameObject.GetComponent<Button>() != null)
@@ -276,35 +302,92 @@ namespace RTSFramework.UI
                     }
                 }
 
-                foreach (var trainable in producer.TrainableUnits)
+                // Populate Trainable Units
+                if (producer != null)
                 {
-                    if (trainable == null) continue;
-
-                    GameObject btnObj = Instantiate(productionButtonPrefab, productionPanel.transform);
-                    var text = btnObj.GetComponentInChildren<TMP_Text>();
-                    if (text != null)
+                    foreach (var trainable in producer.TrainableUnits)
                     {
-                        text.text = trainable.UnitName;
-                    }
+                        if (trainable == null) continue;
 
-                    var button = btnObj.GetComponent<Button>();
-                    if (button != null)
-                    {
-                        var data = trainable;
-                        button.onClick.AddListener(() =>
+                        GameObject btnObj = Instantiate(productionButtonPrefab, productionPanel.transform);
+                        var text = btnObj.GetComponentInChildren<TMP_Text>();
+                        if (text != null)
                         {
-                            producer.TryQueueUnit(data);
-                        });
+                            text.text = trainable.UnitName;
+                        }
+
+                        var button = btnObj.GetComponent<Button>();
+                        if (button != null)
+                        {
+                            var data = trainable;
+                            button.onClick.AddListener(() =>
+                            {
+                                producer.TryQueueUnit(data);
+                            });
+                        }
+                    }
+                }
+
+                // Populate Researchable Upgrades
+                if (researcher != null)
+                {
+                    foreach (var upgrade in researcher.ResearchableUpgrades)
+                    {
+                        if (upgrade == null) continue;
+
+                        GameObject btnObj = Instantiate(productionButtonPrefab, productionPanel.transform);
+                        var text = btnObj.GetComponentInChildren<TMP_Text>();
+                        if (text != null)
+                        {
+                            text.text = upgrade.UpgradeName;
+                        }
+
+                        var button = btnObj.GetComponent<Button>();
+                        if (button != null)
+                        {
+                            var data = upgrade;
+                            button.onClick.AddListener(() =>
+                            {
+                                researcher.TryQueueResearch(data);
+                                UpdateSelectionUI();
+                            });
+
+                            if (UpgradeManager.Instance != null)
+                            {
+                                bool isCompleted = UpgradeManager.Instance.IsUpgradeCompleted(building.Faction, upgrade);
+                                bool prereqsMet = UpgradeManager.Instance.ArePrerequisitesMet(building.Faction, upgrade);
+
+                                if (isCompleted)
+                                {
+                                    button.interactable = false;
+                                    if (text != null) text.text = $"{upgrade.UpgradeName}\n(Done)";
+                                }
+                                else if (!prereqsMet)
+                                {
+                                    button.interactable = false;
+                                    if (text != null) text.text = $"{upgrade.UpgradeName}\n(Locked)";
+                                }
+                            }
+                        }
                     }
                 }
             }
             else
             {
                 activeProducer = null;
+                activeResearcher = null;
                 if (productionPanel != null)
                 {
                     productionPanel.SetActive(false);
                 }
+            }
+        }
+
+        private void HandleGlobalUpgradeCompleted(RTSFramework.Factions.Faction faction, UpgradeData upgrade)
+        {
+            if (SelectionManager.Instance != null && SelectionManager.Instance.SelectedObjects.Count == 1)
+            {
+                UpdateSelectionUI();
             }
         }
 

@@ -32,10 +32,18 @@ namespace RTSFramework.Units
             SelectionManager.UnregisterSelectable(this);
         }
 
+        private float baseMoveSpeed;
+
         private void Start()
         {
             Deselect();
             ApplyFactionColor();
+
+            var agent = GetComponent<NavMeshAgent>();
+            if (agent != null)
+            {
+                baseMoveSpeed = agent.speed;
+            }
 
             // Dynamically attach Fog of War components based on ownership
             if (IsPlayerOwned)
@@ -53,6 +61,37 @@ namespace RTSFramework.Units
                     gameObject.AddComponent<RTSFramework.Fog.FogReceiver>();
                 }
             }
+
+            if (Upgrades.UpgradeManager.Instance != null)
+            {
+                Upgrades.UpgradeManager.Instance.OnUpgradeCompleted += HandleUpgradeCompleted;
+                RecalculateMovementSpeed();
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (Upgrades.UpgradeManager.Instance != null)
+            {
+                Upgrades.UpgradeManager.Instance.OnUpgradeCompleted -= HandleUpgradeCompleted;
+            }
+        }
+
+        private void HandleUpgradeCompleted(RTSFramework.Factions.Faction upgradeFaction, Upgrades.UpgradeData upgrade)
+        {
+            if (upgradeFaction == faction)
+            {
+                RecalculateMovementSpeed();
+            }
+        }
+
+        private void RecalculateMovementSpeed()
+        {
+            var agent = GetComponent<NavMeshAgent>();
+            if (agent == null || faction == null) return;
+
+            string targetTag = unitData != null ? unitData.UnitName : "";
+            agent.speed = Upgrades.UpgradeManager.Instance.GetModifiedValue(faction, targetTag, Upgrades.UpgradeEffectType.MoveSpeed, baseMoveSpeed);
         }
 
         private void ApplyFactionColor()

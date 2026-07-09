@@ -15,8 +15,78 @@ namespace RTSFramework.Combat
 
         private float nextAttackTime;
 
+        private float baseAttackDamage;
+        private float baseAttackRange;
+        private RTSFramework.Factions.Faction faction;
+
         public float AttackRange => attackRange;
         public float AttackDamage => attackDamage;
+
+        private void Start()
+        {
+            baseAttackDamage = attackDamage;
+            baseAttackRange = attackRange;
+
+            // Fetch current faction from unit or building
+            var unit = GetComponent<Units.UnitController>();
+            if (unit != null)
+            {
+                faction = unit.Faction;
+            }
+            else
+            {
+                var building = GetComponent<Buildings.Building>();
+                if (building != null)
+                {
+                    faction = building.Faction;
+                }
+            }
+
+            if (Upgrades.UpgradeManager.Instance != null)
+            {
+                Upgrades.UpgradeManager.Instance.OnUpgradeCompleted += HandleUpgradeCompleted;
+                RecalculateStats();
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (Upgrades.UpgradeManager.Instance != null)
+            {
+                Upgrades.UpgradeManager.Instance.OnUpgradeCompleted -= HandleUpgradeCompleted;
+            }
+        }
+
+        private void HandleUpgradeCompleted(RTSFramework.Factions.Faction upgradeFaction, Upgrades.UpgradeData upgrade)
+        {
+            if (upgradeFaction == faction)
+            {
+                RecalculateStats();
+            }
+        }
+
+        private void RecalculateStats()
+        {
+            if (faction == null) return;
+
+            string targetTag = "";
+            var unit = GetComponent<Units.UnitController>();
+            if (unit != null && unit.UnitData != null)
+            {
+                targetTag = unit.UnitData.UnitName;
+            }
+            else
+            {
+                var building = GetComponent<Buildings.Building>();
+                if (building != null && building.BuildingData != null)
+                {
+                    targetTag = building.BuildingData.BuildingName;
+                }
+            }
+
+            attackDamage = Upgrades.UpgradeManager.Instance.GetModifiedValue(faction, targetTag, Upgrades.UpgradeEffectType.AttackDamage, baseAttackDamage);
+            attackRange = Upgrades.UpgradeManager.Instance.GetModifiedValue(faction, targetTag, Upgrades.UpgradeEffectType.AttackRange, baseAttackRange);
+        }
 
         public bool CanAttack(GameObject target)
         {

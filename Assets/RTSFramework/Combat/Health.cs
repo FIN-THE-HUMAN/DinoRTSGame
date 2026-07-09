@@ -19,6 +19,9 @@ namespace RTSFramework.Combat
         public float MaxHealth => maxHealth;
         public bool IsDead => currentHealth <= 0f;
 
+        private float baseMaxHealth;
+        private RTSFramework.Factions.Faction faction;
+
         private void Awake()
         {
             currentHealth = maxHealth;
@@ -27,6 +30,78 @@ namespace RTSFramework.Combat
             if (gameObject.GetComponent<WorldSpaceUIController>() == null)
             {
                 gameObject.AddComponent<WorldSpaceUIController>();
+            }
+        }
+
+        private void Start()
+        {
+            baseMaxHealth = maxHealth;
+
+            // Resolve Faction
+            var unit = GetComponent<Units.UnitController>();
+            if (unit != null)
+            {
+                faction = unit.Faction;
+            }
+            else
+            {
+                var building = GetComponent<Buildings.Building>();
+                if (building != null)
+                {
+                    faction = building.Faction;
+                }
+            }
+
+            if (Upgrades.UpgradeManager.Instance != null)
+            {
+                Upgrades.UpgradeManager.Instance.OnUpgradeCompleted += HandleUpgradeCompleted;
+                RecalculateMaxHealth();
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (Upgrades.UpgradeManager.Instance != null)
+            {
+                Upgrades.UpgradeManager.Instance.OnUpgradeCompleted -= HandleUpgradeCompleted;
+            }
+        }
+
+        private void HandleUpgradeCompleted(RTSFramework.Factions.Faction upgradeFaction, Upgrades.UpgradeData upgrade)
+        {
+            if (upgradeFaction == faction)
+            {
+                RecalculateMaxHealth();
+            }
+        }
+
+        private void RecalculateMaxHealth()
+        {
+            if (faction == null) return;
+
+            string targetTag = "";
+            var unit = GetComponent<Units.UnitController>();
+            if (unit != null && unit.UnitData != null)
+            {
+                targetTag = unit.UnitData.UnitName;
+            }
+            else
+            {
+                var building = GetComponent<Buildings.Building>();
+                if (building != null && building.BuildingData != null)
+                {
+                    targetTag = building.BuildingData.BuildingName;
+                }
+            }
+
+            float oldMax = maxHealth;
+            maxHealth = Upgrades.UpgradeManager.Instance.GetModifiedValue(faction, targetTag, Upgrades.UpgradeEffectType.MaxHealth, baseMaxHealth);
+
+            if (maxHealth != oldMax)
+            {
+                float diff = maxHealth - oldMax;
+                currentHealth = Mathf.Max(1f, currentHealth + diff);
+                OnHealthChanged?.Invoke(currentHealth, maxHealth);
             }
         }
 
