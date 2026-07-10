@@ -79,7 +79,7 @@ namespace RTSFramework.Upgrades
             }
 
             // Spend resources
-            if (ResourceManager.Instance.SpendResources(upgrade.Cost))
+            if (ResourceManager.Instance.SpendResources(building.Faction, upgrade.Cost))
             {
                 researchQueue.Enqueue(upgrade);
                 OnQueueChanged?.Invoke();
@@ -107,7 +107,7 @@ namespace RTSFramework.Upgrades
             // Refund resources
             foreach (var c in canceled.Cost)
             {
-                ResourceManager.Instance.AddResource(c.resourceType, c.amount);
+                ResourceManager.Instance.AddResource(building.Faction, c.resourceType, c.amount);
             }
 
             if (researchQueue.Count == 0)

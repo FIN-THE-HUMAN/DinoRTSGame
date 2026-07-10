@@ -123,12 +123,33 @@ namespace RTSFramework.Buildings
             return true;
         }
 
+        public Building PlaceBuildingForFaction(BuildingData data, Vector3 position, Factions.Faction faction)
+        {
+            if (data == null || faction == null) return null;
+
+            // Deduct resources for this specific faction
+            if (ResourceManager.Instance.SpendResources(faction, data.Cost))
+            {
+                GameObject buildingObj = Instantiate(data.BuildingPrefab, position, Quaternion.identity);
+                Building building = buildingObj.GetComponent<Building>();
+                if (building != null)
+                {
+                    building.Initialize(data);
+                    building.SetFaction(faction);
+                }
+                return building;
+            }
+            return null;
+        }
+
         private void PlaceBuilding(Vector3 position)
         {
             if (currentBuildingData == null) return;
 
-            // Deduct resources
-            if (ResourceManager.Instance.SpendResources(currentBuildingData.Cost))
+            Factions.Faction playerFaction = GetPlayerFaction();
+
+            // Deduct resources for player faction
+            if (ResourceManager.Instance.SpendResources(playerFaction, currentBuildingData.Cost))
             {
                 GameObject buildingObj = Instantiate(currentBuildingData.BuildingPrefab, position, Quaternion.identity);
                 Building building = buildingObj.GetComponent<Building>();
@@ -137,8 +158,6 @@ namespace RTSFramework.Buildings
                 {
                     building.Initialize(currentBuildingData);
                     
-                    // Assign player faction dynamically
-                    Factions.Faction playerFaction = GetPlayerFaction();
                     if (playerFaction != null)
                     {
                         building.SetFaction(playerFaction);

@@ -38,7 +38,22 @@ namespace RTSFramework.Resources
             ResourceType type = gatherer.CurrentCarriedType;
             int amount = gatherer.DropOff();
 
-            ResourceManager.Instance.AddResource(type, amount);
+            Factions.Faction faction = null;
+            var building = GetComponent<Buildings.Building>();
+            if (building != null)
+            {
+                faction = building.Faction;
+            }
+            else
+            {
+                var unit = GetComponent<Units.UnitController>();
+                if (unit != null)
+                {
+                    faction = unit.Faction;
+                }
+            }
+
+            ResourceManager.Instance.AddResource(faction, type, amount);
             Debug.Log($"Deposited {amount} of {type} from {gatherer.gameObject.name} to {gameObject.name}");
         }
 
