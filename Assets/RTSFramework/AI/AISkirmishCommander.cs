@@ -118,33 +118,55 @@ namespace RTSFramework.AI
 
         private void ManageIdleWorkers()
         {
-            // Gather all resource sources
-            var sources = FindObjectsOfType<ResourceSource>();
-            if (sources.Length == 0) return;
-
             foreach (var worker in myWorkers)
             {
                 if (worker == null || worker.HasActiveCommand) continue;
 
-                // Find closest non-depleted resource source
-                ResourceSource closestSource = null;
-                float minDist = float.MaxValue;
-                foreach (var source in sources)
+                // 1. First priority: Check if there are any unfinished friendly construction sites
+                Building unfinishedSite = null;
+                float minBuildDist = float.MaxValue;
+                foreach (var site in myConstructionSites)
                 {
-                    if (source == null || source.IsDepleted) continue;
+                    if (site == null || site.IsConstructed) continue;
 
-                    float d = Vector3.Distance(worker.transform.position, source.transform.position);
-                    if (d < minDist)
+                    float d = Vector3.Distance(worker.transform.position, site.transform.position);
+                    if (d < minBuildDist)
                     {
-                        minDist = d;
-                        closestSource = source;
+                        minBuildDist = d;
+                        unfinishedSite = site;
                     }
                 }
 
-                if (closestSource != null)
+                if (unfinishedSite != null)
                 {
-                    worker.GiveCommand(new GatherCommand(closestSource), false);
-                    Debug.Log($"AI Commander: Sent worker '{worker.gameObject.name}' to gather '{closestSource.gameObject.name}'.");
+                    worker.GiveCommand(new BuildCommand(unfinishedSite), false);
+                    Debug.Log($"AI Commander: Sent idle worker '{worker.gameObject.name}' to construct unfinished building '{unfinishedSite.gameObject.name}'.");
+                    continue;
+                }
+
+                // 2. Second priority: Gather resources
+                var sources = FindObjectsOfType<ResourceSource>();
+                if (sources.Length > 0)
+                {
+                    ResourceSource closestSource = null;
+                    float minDist = float.MaxValue;
+                    foreach (var source in sources)
+                    {
+                        if (source == null || source.IsDepleted) continue;
+
+                        float d = Vector3.Distance(worker.transform.position, source.transform.position);
+                        if (d < minDist)
+                        {
+                            minDist = d;
+                            closestSource = source;
+                        }
+                    }
+
+                    if (closestSource != null)
+                    {
+                        worker.GiveCommand(new GatherCommand(closestSource), false);
+                        Debug.Log($"AI Commander: Sent worker '{worker.gameObject.name}' to gather '{closestSource.gameObject.name}'.");
+                    }
                 }
             }
         }
@@ -177,7 +199,7 @@ namespace RTSFramework.AI
 
         private void ManageBaseBuilding()
         {
-            if (barracksPrefabData == null) return;
+            if (myWorkers.Count == 0 || barracksPrefabData == null) return;
 
             // Check if we already have a Barracks or are building one
             bool hasBarracks = false;
@@ -223,7 +245,7 @@ namespace RTSFramework.AI
                 targetPos = hit.position;
             }
 
-            // Place building foundation
+            // Place building foundation instantly
             Building barracks = BuildingSystem.Instance.PlaceBuildingForFaction(barracksPrefabData, targetPos, aiFaction);
             if (barracks != null)
             {

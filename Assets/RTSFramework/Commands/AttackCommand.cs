@@ -44,7 +44,18 @@ namespace RTSFramework.Commands
                 return;
             }
 
-            float distance = Vector3.Distance(unit.transform.position, target.transform.position);
+            float distance = float.MaxValue;
+            Collider targetCollider = target.GetComponent<Collider>();
+            if (targetCollider != null)
+            {
+                Vector3 closestPoint = targetCollider.ClosestPoint(unit.transform.position);
+                closestPoint.y = unit.transform.position.y; // project to same ground level
+                distance = Vector3.Distance(unit.transform.position, closestPoint);
+            }
+            else
+            {
+                distance = Vector3.Distance(unit.transform.position, target.transform.position);
+            }
 
             if (distance <= combat.AttackRange)
             {

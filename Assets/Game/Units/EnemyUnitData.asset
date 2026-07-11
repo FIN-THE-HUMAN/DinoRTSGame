@@ -12,11 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8ec925f46ca03db4ca92836d02feec09, type: 3}
   m_Name: EnemyUnitData
   m_EditorClassIdentifier: RTSFramework::RTSFramework.Units.UnitData
-  unitName: T-Rex Scourge
+  unitName: Enemy Dino
   maxHealth: 250
   trainingTime: 5
-  cost: []
-  unitPrefab: {fileID: 0}
+  cost:
+  - resourceType: 3
+    amount: 50
+  unitPrefab: {fileID: 4522815075678181838, guid: e0fc04d84c1bb2f409ca0420a47f8106, type: 3}
   unitIcon: {fileID: 0}
   selectionPriority: 100
   selectVoices: []

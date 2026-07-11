@@ -36,11 +36,18 @@ namespace RTSFramework.Buildings
         public Transform Transform => transform;
         public GameObject GameObject => gameObject;
 
+        private Vector3 originalScale;
+
         private void Awake()
         {
             health = GetComponent<Health>();
             SetupNavMeshObstacle();
             SetupSelectionVisual();
+
+            if (originalScale == Vector3.zero)
+            {
+                originalScale = transform.localScale;
+            }
         }
 
         private void SetupSelectionVisual()
@@ -158,6 +165,21 @@ namespace RTSFramework.Buildings
             constructionProgress = 0f;
             isConstructed = false;
 
+            if (originalScale == Vector3.zero)
+            {
+                originalScale = transform.localScale;
+            }
+            // Set flat foundation scale (10% height)
+            transform.localScale = new Vector3(originalScale.x, originalScale.y * 0.1f, originalScale.z);
+
+            // Set dynamic health values for foundation (starting at 10 HP)
+            if (health != null && data != null)
+            {
+                health.SetBaseMaxHealth(data.MaxHealth);
+                float startingMaxHealth = Mathf.Min(10f, data.MaxHealth);
+                health.SetConstructionHealth(startingMaxHealth, startingMaxHealth);
+            }
+
             // Disable components until constructed
             ToggleFunctionality(false);
         }
@@ -183,8 +205,33 @@ namespace RTSFramework.Buildings
         {
             if (isConstructed) return;
 
+            float oldProgress = constructionProgress;
             constructionProgress += amount;
             constructionProgress = Mathf.Clamp01(constructionProgress);
+
+            // Update height scale based on construction progress
+            transform.localScale = new Vector3(originalScale.x, originalScale.y * (0.1f + 0.9f * constructionProgress), originalScale.z);
+
+            // Update health values dynamically during construction
+            if (health != null && buildingData != null)
+            {
+                float finalMaxHealth = buildingData.MaxHealth;
+                if (Upgrades.UpgradeManager.Instance != null && faction != null)
+                {
+                    string targetTag = buildingData.BuildingName;
+                    finalMaxHealth = Upgrades.UpgradeManager.Instance.GetModifiedValue(faction, targetTag, Upgrades.UpgradeEffectType.MaxHealth, finalMaxHealth);
+                }
+
+                float startingMaxHealth = Mathf.Min(10f, finalMaxHealth);
+                float oldMaxHealth = startingMaxHealth + (finalMaxHealth - startingMaxHealth) * oldProgress;
+                float newMaxHealth = startingMaxHealth + (finalMaxHealth - startingMaxHealth) * constructionProgress;
+                
+                // Add the difference in maximum health to the current health
+                float addedMaxHealth = newMaxHealth - oldMaxHealth;
+                float newCurrentHealth = health.CurrentHealth + addedMaxHealth;
+
+                health.SetConstructionHealth(newMaxHealth, newCurrentHealth);
+            }
 
             OnConstructionProgressChanged?.Invoke(constructionProgress);
 
@@ -197,6 +244,20 @@ namespace RTSFramework.Buildings
         private void CompleteConstruction()
         {
             isConstructed = true;
+            transform.localScale = originalScale; // Reset to full scale
+
+            // Ensure health is set to final values (retaining any damage taken)
+            if (health != null && buildingData != null)
+            {
+                float finalMaxHealth = buildingData.MaxHealth;
+                if (Upgrades.UpgradeManager.Instance != null && faction != null)
+                {
+                    string targetTag = buildingData.BuildingName;
+                    finalMaxHealth = Upgrades.UpgradeManager.Instance.GetModifiedValue(faction, targetTag, Upgrades.UpgradeEffectType.MaxHealth, finalMaxHealth);
+                }
+                health.SetConstructionHealth(finalMaxHealth, health.CurrentHealth);
+            }
+
             ToggleFunctionality(true);
             OnConstructionComplete?.Invoke();
             Debug.Log($"{gameObject.name} construction complete!");

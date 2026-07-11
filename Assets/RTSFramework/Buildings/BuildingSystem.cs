@@ -130,7 +130,8 @@ namespace RTSFramework.Buildings
             // Deduct resources for this specific faction
             if (ResourceManager.Instance.SpendResources(faction, data.Cost))
             {
-                GameObject buildingObj = Instantiate(data.BuildingPrefab, position, Quaternion.identity);
+                float yOffset = data.BuildingPrefab != null ? data.BuildingPrefab.transform.position.y : 0f;
+                GameObject buildingObj = Instantiate(data.BuildingPrefab, position + Vector3.up * yOffset, Quaternion.identity);
                 Building building = buildingObj.GetComponent<Building>();
                 if (building != null)
                 {

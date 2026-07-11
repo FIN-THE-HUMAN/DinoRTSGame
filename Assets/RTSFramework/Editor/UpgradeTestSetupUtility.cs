@@ -138,6 +138,69 @@ namespace RTSFramework.Editor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
         }
+
+        [MenuItem("RTS Debug/Setup AI Test")]
+        public static void SetupAITest()
+        {
+            // 1. Duplicate PlayerUnit.prefab to EnemyUnit.prefab if not exists
+            string playerPrefabPath = "Assets/Game/Units/PlayerUnit.prefab";
+            string enemyPrefabPath = "Assets/Game/Units/EnemyUnit.prefab";
+            
+            if (!AssetDatabase.CopyAsset(playerPrefabPath, enemyPrefabPath))
+            {
+                Debug.LogWarning("SetupAITest: EnemyUnit.prefab already exists or player prefab is missing.");
+            }
+            AssetDatabase.Refresh();
+
+            // 2. Load EnemyUnit.prefab asset and link it to EnemyUnitData.asset
+            GameObject enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(enemyPrefabPath);
+            string enemyDataPath = "Assets/Game/Units/EnemyUnitData.asset";
+            var enemyUnitData = AssetDatabase.LoadAssetAtPath<RTSFramework.Units.UnitData>(enemyDataPath);
+            if (enemyUnitData != null && enemyPrefab != null)
+            {
+                SerializedObject serializedData = new SerializedObject(enemyUnitData);
+                serializedData.FindProperty("unitPrefab").objectReferenceValue = enemyPrefab;
+                serializedData.FindProperty("unitName").stringValue = "Enemy Dino";
+                
+                // Add a cost of 50 Gold
+                var costProp = serializedData.FindProperty("cost");
+                costProp.ClearArray();
+                costProp.InsertArrayElementAtIndex(0);
+                var costElement = costProp.GetArrayElementAtIndex(0);
+                costElement.FindPropertyRelative("resourceType").enumValueIndex = (int)Resources.ResourceType.Gold;
+                costElement.FindPropertyRelative("amount").intValue = 50;
+
+                serializedData.ApplyModifiedProperties();
+                EditorUtility.SetDirty(enemyUnitData);
+            }
+
+            // 3. Find the enemy Town Hall GameObject named "TownHall (1)" in the active scene and update its trainableUnits
+            GameObject enemyTownHall = GameObject.Find("TownHall (1)");
+            if (enemyTownHall != null)
+            {
+                var prod = enemyTownHall.GetComponent<UnitProductionComponent>();
+                if (prod != null)
+                {
+                    SerializedObject serializedProd = new SerializedObject(prod);
+                    var trainableList = serializedProd.FindProperty("trainableUnits");
+                    trainableList.ClearArray();
+                    trainableList.InsertArrayElementAtIndex(0);
+                    trainableList.GetArrayElementAtIndex(0).objectReferenceValue = enemyUnitData;
+                    serializedProd.ApplyModifiedProperties();
+                    
+                    EditorUtility.SetDirty(prod);
+                    UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(enemyTownHall.scene);
+                    Debug.Log("SetupAITest: Successfully updated TownHall (1)'s trainableUnits list with EnemyUnitData!");
+                }
+            }
+            else
+            {
+                Debug.LogWarning("SetupAITest: 'TownHall (1)' was not found in the active scene. Please open the correct scene first!");
+            }
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+        }
     }
 }
 #endif

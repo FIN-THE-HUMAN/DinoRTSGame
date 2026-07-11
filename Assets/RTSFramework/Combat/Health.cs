@@ -16,10 +16,11 @@ namespace RTSFramework.Combat
         public Func<float, GameObject, float> OnCalculateDamage;
 
         public float CurrentHealth => currentHealth;
-        public float MaxHealth => maxHealth;
+        public float MaxHealth => finalMaxHealth > 0f ? finalMaxHealth : maxHealth;
         public bool IsDead => currentHealth <= 0f;
 
         private float baseMaxHealth;
+        private float finalMaxHealth;
         private RTSFramework.Factions.Faction faction;
 
         private void Awake()
@@ -35,7 +36,14 @@ namespace RTSFramework.Combat
 
         private void Start()
         {
-            baseMaxHealth = maxHealth;
+            if (baseMaxHealth == 0f)
+            {
+                baseMaxHealth = maxHealth;
+            }
+            if (finalMaxHealth == 0f)
+            {
+                finalMaxHealth = baseMaxHealth;
+            }
 
             // Resolve Faction
             var unit = GetComponent<Units.UnitController>();
@@ -95,7 +103,19 @@ namespace RTSFramework.Combat
             }
 
             float oldMax = maxHealth;
-            maxHealth = Upgrades.UpgradeManager.Instance.GetModifiedValue(faction, targetTag, Upgrades.UpgradeEffectType.MaxHealth, baseMaxHealth);
+            float finalMax = Upgrades.UpgradeManager.Instance.GetModifiedValue(faction, targetTag, Upgrades.UpgradeEffectType.MaxHealth, baseMaxHealth);
+
+            // Scale if it's a building under construction
+            var bComp = GetComponent<Buildings.Building>();
+            if (bComp != null && !bComp.IsConstructed)
+            {
+                float startingMaxHealth = Mathf.Min(10f, finalMax);
+                maxHealth = startingMaxHealth + (finalMax - startingMaxHealth) * bComp.ConstructionProgress;
+            }
+            else
+            {
+                maxHealth = finalMax;
+            }
 
             if (maxHealth != oldMax)
             {
@@ -117,7 +137,7 @@ namespace RTSFramework.Combat
 
             currentHealth = Mathf.Max(0f, currentHealth - actualDamage);
             
-            OnHealthChanged?.Invoke(currentHealth, maxHealth);
+            OnHealthChanged?.Invoke(currentHealth, MaxHealth);
             OnDamageTaken?.Invoke(actualDamage, attacker);
 
             if (currentHealth <= 0f)
@@ -131,7 +151,20 @@ namespace RTSFramework.Combat
             if (IsDead) return;
 
             currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
-            OnHealthChanged?.Invoke(currentHealth, maxHealth);
+            OnHealthChanged?.Invoke(currentHealth, MaxHealth);
+        }
+
+        public void SetConstructionHealth(float currentMax, float currentVal)
+        {
+            this.maxHealth = currentMax;
+            this.currentHealth = Mathf.Clamp(currentVal, 0f, currentMax);
+            OnHealthChanged?.Invoke(this.currentHealth, MaxHealth);
+        }
+
+        public void SetBaseMaxHealth(float baseMax)
+        {
+            this.baseMaxHealth = baseMax;
+            this.finalMaxHealth = baseMax;
         }
 
         private void Die()

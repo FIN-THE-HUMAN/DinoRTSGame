@@ -21,6 +21,7 @@ namespace RTSFramework.Units
         public UnitData UnitData => unitData;
         public bool IsPlayerOwned => faction != null && faction.IsPlayerFaction;
         public bool HasActiveCommand => currentCommand != null || commandQueue.Count > 0;
+        public Command CurrentCommand => currentCommand;
 
         private void OnEnable()
         {

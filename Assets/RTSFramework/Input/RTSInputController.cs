@@ -222,7 +222,7 @@ namespace RTSFramework.InputSystem
                                 commandIssued = true;
                             }
                         }
-                        else if (targetBuilding != null && !targetBuilding.IsConstructed)
+                        else if (targetBuilding != null && !targetBuilding.IsConstructed && targetBuilding.IsPlayerOwned)
                         {
                             // Construct under-construction building
                             foreach (var unit in movingUnits)
@@ -242,13 +242,43 @@ namespace RTSFramework.InputSystem
                         }
                         else if (targetHealth != null)
                         {
-                            // Attack target
-                            foreach (var unit in movingUnits)
+                            bool isEnemy = false;
+                            var targetUnit = targetHealth.GetComponent<Units.UnitController>();
+                            if (targetUnit != null)
                             {
-                                if (targetHealth.gameObject != unit.gameObject)
+                                isEnemy = !targetUnit.IsPlayerOwned;
+                            }
+                            else
+                            {
+                                var targetBld = targetHealth.GetComponent<Buildings.Building>();
+                                if (targetBld != null)
                                 {
-                                    unit.GiveCommand(new AttackCommand(targetHealth.gameObject), isQueueing);
-                                    commandIssued = true;
+                                    isEnemy = !targetBld.IsPlayerOwned;
+                                }
+                            }
+
+                            if (isEnemy)
+                            {
+                                // Attack enemy target
+                                foreach (var unit in movingUnits)
+                                {
+                                    if (targetHealth.gameObject != unit.gameObject)
+                                    {
+                                        unit.GiveCommand(new AttackCommand(targetHealth.gameObject), isQueueing);
+                                        commandIssued = true;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                // Friendly target: just move to its location (follow/walk to it)
+                                foreach (var unit in movingUnits)
+                                {
+                                    if (targetHealth.gameObject != unit.gameObject)
+                                    {
+                                        unit.GiveCommand(new MoveCommand(targetHealth.transform.position), isQueueing);
+                                        commandIssued = true;
+                                    }
                                 }
                             }
                         }

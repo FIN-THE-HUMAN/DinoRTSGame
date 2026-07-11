@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: RTSFramework::RTSFramework.Buildings.BuildingData
   buildingName: Town Hall
   maxHealth: 500
-  constructionTime: 5
+  constructionTime: 25
   cost:
   - resourceType: 0
     amount: 100
