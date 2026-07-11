@@ -108,6 +108,20 @@ namespace RTSFramework.UI
 
         private void Update()
         {
+            // Dynamically update selected ResourceSource count if one is selected
+            if (SelectionManager.Instance != null && SelectionManager.Instance.SelectedObjects.Count == 1)
+            {
+                var lead = SelectionManager.Instance.SelectedObjects[0];
+                if (lead != null && !lead.Equals(null))
+                {
+                    var resource = lead.GameObject.GetComponent<Resources.ResourceSource>();
+                    if (resource != null && unitCountText != null)
+                    {
+                        unitCountText.text = $"Amount: {resource.CurrentAmount} / {resource.MaxAmount}";
+                    }
+                }
+            }
+
             if (productionProgressBar == null) return;
 
             bool showProgress = false;
@@ -188,7 +202,8 @@ namespace RTSFramework.UI
 
             var unit = leadSelectable.GameObject.GetComponent<UnitController>();
             var building = leadSelectable.GameObject.GetComponent<Building>();
-
+            var resource = leadSelectable.GameObject.GetComponent<Resources.ResourceSource>();
+ 
             if (unit != null)
             {
                 leadName = unit.UnitData != null ? unit.UnitData.UnitName : unit.gameObject.name;
@@ -198,12 +213,16 @@ namespace RTSFramework.UI
             {
                 leadName = building.BuildingData != null ? building.BuildingData.BuildingName : building.gameObject.name;
             }
-
+            else if (resource != null)
+            {
+                leadName = (resource.ResourceType == Resources.ResourceType.Gold) ? "Gold Mine" : "Forest Tree";
+            }
+ 
             if (unitNameText != null)
             {
                 unitNameText.text = leadName;
             }
-
+ 
             if (unitCountText != null)
             {
                 if (selectedObjects.Count > 1)
@@ -213,11 +232,19 @@ namespace RTSFramework.UI
                 }
                 else
                 {
-                    var health = leadSelectable.GameObject.GetComponent<Combat.Health>();
-                    SubscribeToHealth(health);
-                    if (health == null)
+                    if (resource != null)
                     {
-                        unitCountText.text = "";
+                        SubscribeToHealth(null);
+                        unitCountText.text = $"Amount: {resource.CurrentAmount} / {resource.MaxAmount}";
+                    }
+                    else
+                    {
+                        var health = leadSelectable.GameObject.GetComponent<Combat.Health>();
+                        SubscribeToHealth(health);
+                        if (health == null)
+                        {
+                            unitCountText.text = "";
+                        }
                     }
                 }
             }
