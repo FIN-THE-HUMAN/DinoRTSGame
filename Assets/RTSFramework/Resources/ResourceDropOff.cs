@@ -57,7 +57,7 @@ namespace RTSFramework.Resources
             Debug.Log($"Deposited {amount} of {type} from {gatherer.gameObject.name} to {gameObject.name}");
         }
 
-        public static ResourceDropOff FindNearest(Vector3 position, ResourceType type)
+        public static ResourceDropOff FindNearest(Vector3 position, ResourceType type, Factions.Faction workerFaction)
         {
             ResourceDropOff nearest = null;
             float minDistance = float.MaxValue;
@@ -65,6 +65,24 @@ namespace RTSFramework.Resources
             foreach (var dropOff in allDropOffs)
             {
                 if (dropOff == null || !dropOff.Accepts(type)) continue;
+
+                // Filter by owner faction compatibility
+                Factions.Faction dropOffFaction = null;
+                var building = dropOff.GetComponent<Buildings.Building>();
+                if (building != null)
+                {
+                    dropOffFaction = building.Faction;
+                }
+                else
+                {
+                    var unit = dropOff.GetComponent<Units.UnitController>();
+                    if (unit != null)
+                    {
+                        dropOffFaction = unit.Faction;
+                    }
+                }
+
+                if (dropOffFaction != workerFaction) continue;
 
                 float dist = Vector3.Distance(position, dropOff.transform.position);
                 if (dist < minDistance)

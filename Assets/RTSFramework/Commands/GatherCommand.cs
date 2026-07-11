@@ -45,7 +45,9 @@ namespace RTSFramework.Commands
                 // Find or update nearest drop-off
                 if (currentDropOff == null)
                 {
-                    currentDropOff = ResourceDropOff.FindNearest(unit.transform.position, gatherer.CurrentCarriedType);
+                    var controller = unit.GetComponent<Units.UnitController>();
+                    Factions.Faction workerFaction = controller != null ? controller.Faction : null;
+                    currentDropOff = ResourceDropOff.FindNearest(unit.transform.position, gatherer.CurrentCarriedType, workerFaction);
                 }
 
                 if (currentDropOff == null)
