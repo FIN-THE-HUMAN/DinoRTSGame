@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using RTSFramework.Selection;
+using RTSFramework.Fog;
 
 namespace RTSFramework.Combat
 {
@@ -30,17 +31,10 @@ namespace RTSFramework.Combat
 
         private void Start()
         {
-            // Calculate a suitable height offset based on the object's collider bounds
             var col = GetComponent<Collider>();
             if (col != null)
             {
-                heightOffset = col.bounds.extents.y * 2f + 0.3f;
-                
-                // Adjust height specifically for box colliders on scaled structures
-                if (col is BoxCollider box)
-                {
-                    heightOffset = box.size.y * transform.localScale.y + 0.4f;
-                }
+                heightOffset = col.bounds.size.y + 0.3f;
             }
 
             SetupWorldSpaceCanvas();
@@ -58,14 +52,25 @@ namespace RTSFramework.Combat
             {
                 health.OnHealthChanged -= HandleHealthChanged;
             }
+            if (canvasObj != null)
+            {
+                Destroy(canvasObj);
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (canvasObj != null)
+            {
+                canvasObj.SetActive(false);
+            }
         }
 
         private void SetupWorldSpaceCanvas()
         {
-            // 1. Create Canvas GameObject
+            // 1. Create Canvas GameObject (unparented to avoid non-uniform scale distortion and rotation shearing!)
             canvasObj = new GameObject("HealthBarCanvas", typeof(RectTransform));
-            canvasObj.transform.SetParent(transform, false);
-            canvasObj.transform.localPosition = new Vector3(0f, heightOffset, 0f);
+            canvasObj.transform.position = transform.position + Vector3.up * heightOffset;
 
             var canvas = canvasObj.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
@@ -151,7 +156,14 @@ namespace RTSFramework.Combat
             // Check if took damage recently
             bool wasDamagedRecently = Time.time - lastDamageTime < visibleDurationAfterDamage;
 
-            bool shouldBeVisible = (isSelected || wasDamagedRecently) && !health.IsDead;
+            // Check if visible through Fog of War (neutral or enemy objects must be revealed)
+            bool isVisibleInFog = true;
+            if (FogOfWarManager.Instance != null && selectable != null && !selectable.IsPlayerOwned)
+            {
+                isVisibleInFog = FogOfWarManager.Instance.GetVisibility(transform.position) > 0.9f;
+            }
+
+            bool shouldBeVisible = (isSelected || wasDamagedRecently) && !health.IsDead && isVisibleInFog;
             canvasObj.SetActive(shouldBeVisible);
 
             if (shouldBeVisible)
@@ -162,6 +174,14 @@ namespace RTSFramework.Combat
                 {
                     canvasObj.transform.LookAt(canvasObj.transform.position + cam.transform.rotation * Vector3.forward, cam.transform.rotation * Vector3.up);
                 }
+
+                // Dynamically update position (crucial during construction scaling)
+                var col = GetComponent<Collider>();
+                if (col != null)
+                {
+                    heightOffset = col.bounds.size.y + 0.3f;
+                }
+                canvasObj.transform.position = transform.position + Vector3.up * heightOffset;
             }
         }
     }
