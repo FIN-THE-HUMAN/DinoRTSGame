@@ -19,6 +19,8 @@ namespace RTSFramework.AI
         [SerializeField] private BuildingData barracksPrefabData;
         [SerializeField] private UnitData workerPrefabData;
         [SerializeField] private UnitData combatUnitPrefabData;
+        [SerializeField] private UnitData combatRangedPrefabData;
+        [SerializeField] private BuildingData towerPrefabData;
 
         [Header("AI Logic Settings")]
         [SerializeField] private float evaluationInterval = 1f;
@@ -201,7 +203,7 @@ namespace RTSFramework.AI
         {
             if (myWorkers.Count == 0 || barracksPrefabData == null) return;
 
-            // Check if we already have a Barracks or are building one
+            // 1. Check if we already have a Barracks or are building one
             bool hasBarracks = false;
             foreach (var b in myBuildings)
             {
@@ -220,50 +222,108 @@ namespace RTSFramework.AI
                 }
             }
 
-            if (hasBarracks) return;
-
-            // Do we have enough resources to build a Barracks?
-            if (!ResourceManager.Instance.HasResources(aiFaction, barracksPrefabData.Cost)) return;
-
-            // Find Town Hall to build near it
-            Building townHall = null;
-            foreach (var b in myBuildings)
+            if (!hasBarracks)
             {
-                if (b != null && b.GetComponent<ResourceDropOff>() != null)
+                // Do we have enough resources to build a Barracks?
+                if (!ResourceManager.Instance.HasResources(aiFaction, barracksPrefabData.Cost)) return;
+
+                // Find Town Hall to build near it
+                Building townHall = null;
+                foreach (var b in myBuildings)
                 {
-                    townHall = b;
-                    break;
+                    if (b != null && b.GetComponent<ResourceDropOff>() != null)
+                    {
+                        townHall = b;
+                        break;
+                    }
                 }
-            }
 
-            Vector3 basePos = townHall != null ? townHall.transform.position : transform.position;
+                Vector3 basePos = townHall != null ? townHall.transform.position : transform.position;
 
-            // Find a build position on NavMesh near the basePos
-            Vector3 targetPos = basePos + new Vector3(Random.Range(-buildDistance, buildDistance), 0f, Random.Range(-buildDistance, buildDistance));
-            if (NavMesh.SamplePosition(targetPos, out NavMeshHit hit, 10f, NavMesh.AllAreas))
-            {
-                targetPos = hit.position;
-            }
-
-            // Place building foundation instantly
-            Building barracks = BuildingSystem.Instance.PlaceBuildingForFaction(barracksPrefabData, targetPos, aiFaction);
-            if (barracks != null)
-            {
-                Debug.Log($"AI Commander: Programmatically placed Barracks foundation at {targetPos}.");
-
-                // Command a worker to build it
-                UnitController builder = GetLeastBusyWorker();
-                if (builder != null)
+                // Find a build position on NavMesh near the basePos
+                Vector3 targetPos = basePos + new Vector3(Random.Range(-buildDistance, buildDistance), 0f, Random.Range(-buildDistance, buildDistance));
+                if (NavMesh.SamplePosition(targetPos, out NavMeshHit hit, 10f, NavMesh.AllAreas))
                 {
-                    builder.GiveCommand(new BuildCommand(barracks), false);
-                    Debug.Log($"AI Commander: Ordered worker '{builder.gameObject.name}' to construct Barracks.");
+                    targetPos = hit.position;
+                }
+
+                // Place building foundation instantly
+                Building barracks = BuildingSystem.Instance.PlaceBuildingForFaction(barracksPrefabData, targetPos, aiFaction);
+                if (barracks != null)
+                {
+                    Debug.Log($"AI Commander: Programmatically placed Barracks foundation at {targetPos}.");
+
+                    // Command a worker to build it
+                    UnitController builder = GetLeastBusyWorker();
+                    if (builder != null)
+                    {
+                        builder.GiveCommand(new BuildCommand(barracks), false);
+                        Debug.Log($"AI Commander: Ordered worker '{builder.gameObject.name}' to construct Barracks.");
+                    }
+                }
+                return; // Prioritize barracks construction first
+            }
+
+            // 2. Manage Defensive Towers (build up to 2 towers once Barracks is ready)
+            if (towerPrefabData != null)
+            {
+                int towerCount = 0;
+                foreach (var b in myBuildings)
+                {
+                    if (b != null && b.BuildingData == towerPrefabData) towerCount++;
+                }
+                foreach (var b in myConstructionSites)
+                {
+                    if (b != null && b.BuildingData == towerPrefabData) towerCount++;
+                }
+
+                if (towerCount < 2)
+                {
+                    // Do we have enough resources to build a Tower?
+                    if (ResourceManager.Instance.HasResources(aiFaction, towerPrefabData.Cost))
+                    {
+                        // Find Town Hall to build near it
+                        Building townHall = null;
+                        foreach (var b in myBuildings)
+                        {
+                            if (b != null && b.GetComponent<ResourceDropOff>() != null)
+                            {
+                                townHall = b;
+                                break;
+                            }
+                        }
+
+                        Vector3 basePos = townHall != null ? townHall.transform.position : transform.position;
+
+                        // Find a build position near the base
+                        Vector3 targetPos = basePos + new Vector3(Random.Range(-buildDistance * 1.2f, buildDistance * 1.2f), 0f, Random.Range(-buildDistance * 1.2f, buildDistance * 1.2f));
+                        if (NavMesh.SamplePosition(targetPos, out NavMeshHit hit, 10f, NavMesh.AllAreas))
+                        {
+                            targetPos = hit.position;
+                        }
+
+                        // Place tower foundation instantly
+                        Building tower = BuildingSystem.Instance.PlaceBuildingForFaction(towerPrefabData, targetPos, aiFaction);
+                        if (tower != null)
+                        {
+                            Debug.Log($"AI Commander: Programmatically placed Defensive Tower foundation at {targetPos}.");
+
+                            // Command a worker to build it
+                            UnitController builder = GetLeastBusyWorker();
+                            if (builder != null)
+                            {
+                                builder.GiveCommand(new BuildCommand(tower), false);
+                                Debug.Log($"AI Commander: Ordered worker '{builder.gameObject.name}' to construct Defensive Tower.");
+                            }
+                        }
+                    }
                 }
             }
         }
 
         private void ManageCombatUnitProduction()
         {
-            if (myCombatUnits.Count >= maxCombatUnitsCount || combatUnitPrefabData == null) return;
+            if (myCombatUnits.Count >= maxCombatUnitsCount) return;
 
             // Find Barracks
             Building barracks = null;
@@ -281,7 +341,33 @@ namespace RTSFramework.AI
                 var prod = barracks.GetComponent<UnitProductionComponent>();
                 if (prod != null && prod.QueueCount < 2)
                 {
-                    prod.TryQueueUnit(combatUnitPrefabData);
+                    // Default to melee unit
+                    UnitData toTrain = combatUnitPrefabData;
+
+                    if (combatRangedPrefabData != null)
+                    {
+                        // Count how many ranged units we currently have
+                        int rangedCount = 0;
+                        foreach (var u in myCombatUnits)
+                        {
+                            if (u.UnitData == combatRangedPrefabData)
+                            {
+                                rangedCount++;
+                            }
+                        }
+                        int meleeCount = myCombatUnits.Count - rangedCount;
+
+                        // Maintain a 50/50 split of melee and ranged
+                        if (rangedCount < meleeCount)
+                        {
+                            toTrain = combatRangedPrefabData;
+                        }
+                    }
+
+                    if (toTrain != null)
+                    {
+                        prod.TryQueueUnit(toTrain);
+                    }
                 }
             }
         }

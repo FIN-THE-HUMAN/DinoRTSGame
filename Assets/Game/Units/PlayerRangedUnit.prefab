@@ -19,7 +19,7 @@ GameObject:
   - component: {fileID: 8221824938153352068}
   - component: {fileID: 7667248043063076736}
   m_Layer: 0
-  m_Name: PlayerUnit
+  m_Name: PlayerRangedUnit
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -183,10 +183,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2acf8e25659ba2c4881b252f648a525e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: RTSFramework::RTSFramework.Combat.CombatComponent
-  attackDamage: 10
-  attackRange: 2
-  attackCooldown: 1.5
-  projectilePrefab: {fileID: 0}
+  attackDamage: 8
+  attackRange: 10
+  attackCooldown: 1.2
+  projectilePrefab: {fileID: 7999921783655560928, guid: e5a49ab2884698241b5bb4637767e0f3, type: 3}
   launchPoint: {fileID: 0}
 --- !u!114 &8221824938153352068
 MonoBehaviour:
@@ -217,7 +217,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: RTSFramework::RTSFramework.Units.BuilderComponent
   buildableBuildings:
   - {fileID: 11400000, guid: ce8c23efc9a08294e96b810ec25051c9, type: 2}
-  - {fileID: 11400000, guid: 575cf75d388de754fa1f81e79a804cea, type: 2}
 --- !u!1 &6296376154200064403
 GameObject:
   m_ObjectHideFlags: 0

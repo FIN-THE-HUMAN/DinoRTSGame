@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8ec925f46ca03db4ca92836d02feec09, type: 3}
+  m_Name: PlayerRangedUnitData
+  m_EditorClassIdentifier: RTSFramework::RTSFramework.Units.UnitData
+  unitName: Raptor Archer
+  maxHealth: 80
+  trainingTime: 6
+  cost:
+  - resourceType: 3
+    amount: 60
+  unitPrefab: {fileID: 4522815075678181838, guid: f05759ffe0c761c4fb3f9c5d8d098b37, type: 3}
+  unitIcon: {fileID: 0}
+  selectionPriority: 60
+  selectVoices: []
+  commandVoices: []

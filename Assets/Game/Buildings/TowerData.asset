@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2dab85e5d9d9d484c81a5e358f75da53, type: 3}
+  m_Name: TowerData
+  m_EditorClassIdentifier: RTSFramework::RTSFramework.Buildings.BuildingData
+  buildingName: Defensive Tower
+  maxHealth: 500
+  constructionTime: 15
+  cost:
+  - resourceType: 3
+    amount: 150
+  - resourceType: 0
+    amount: 100
+  buildingPrefab: {fileID: 574209907923781325, guid: 1dfbcaa2cac83a74cb3a394027acc696, type: 3}
+  ghostPrefab: {fileID: 2498917985393013006, guid: 2430eebdcfab8834181d043ae3c5b4ea, type: 3}
+  gridSize: 2
