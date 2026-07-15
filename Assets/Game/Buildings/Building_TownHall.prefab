@@ -106,6 +106,7 @@ GameObject:
   - component: {fileID: 1728194516377653572}
   - component: {fileID: 4647541070327656499}
   - component: {fileID: 684086748294827021}
+  - component: {fileID: 8751211195235427911}
   m_Layer: 0
   m_Name: Building_TownHall
   m_TagString: Untagged
@@ -284,6 +285,18 @@ MonoBehaviour:
   - {fileID: 11400000, guid: b30659f3973bf4a4dbccf1e53d448dfe, type: 2}
   - {fileID: 11400000, guid: bd7a48b463dffa34cb98ad8b23318462, type: 2}
   queueMaxSize: 5
+--- !u!114 &8751211195235427911
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4938607858621663544}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2d8a43dbddb8ba45ad2915efda6da9c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: RTSFramework::RTSFramework.UI.MinimapMarker
 --- !u!1 &8599304547673891880
 GameObject:
   m_ObjectHideFlags: 0

@@ -184,5 +184,21 @@ namespace RTSFramework.CameraSystem
                 transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationLerpSpeed * Time.deltaTime);
             }
         }
+
+        public void SetTargetPosition(Vector3 newWorldPosition)
+        {
+            Vector3 forward = transform.forward;
+            if (Mathf.Abs(forward.y) > 0.001f)
+            {
+                float distance = -targetPosition.y / forward.y;
+                Vector3 lookOffset = forward * distance;
+                targetPosition = newWorldPosition - lookOffset;
+                targetPosition.y = Mathf.Clamp(targetPosition.y, minHeight, maxHeight);
+            }
+            else
+            {
+                targetPosition = new Vector3(newWorldPosition.x, targetPosition.y, newWorldPosition.z);
+            }
+        }
     }
 }

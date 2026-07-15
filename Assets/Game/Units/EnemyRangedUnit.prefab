@@ -18,6 +18,7 @@ GameObject:
   - component: {fileID: 3467996709583499300}
   - component: {fileID: 8221824938153352068}
   - component: {fileID: 7667248043063076736}
+  - component: {fileID: 5026484382587448162}
   m_Layer: 0
   m_Name: EnemyRangedUnit
   m_TagString: Untagged
@@ -217,6 +218,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: RTSFramework::RTSFramework.Units.BuilderComponent
   buildableBuildings:
   - {fileID: 11400000, guid: ce8c23efc9a08294e96b810ec25051c9, type: 2}
+--- !u!114 &5026484382587448162
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4522815075678181838}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2d8a43dbddb8ba45ad2915efda6da9c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: RTSFramework::RTSFramework.UI.MinimapMarker
 --- !u!1 &6296376154200064403
 GameObject:
   m_ObjectHideFlags: 0
