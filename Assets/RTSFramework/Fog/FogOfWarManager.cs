@@ -5,7 +5,25 @@ namespace RTSFramework.Fog
 {
     public class FogOfWarManager : MonoBehaviour
     {
-        public static FogOfWarManager Instance { get; private set; }
+        private static FogOfWarManager instance;
+        public static bool HasInstance => instance != null;
+
+        public static FogOfWarManager Instance
+        {
+            get
+            {
+                if (instance == null)
+                {
+                    instance = Object.FindAnyObjectByType<FogOfWarManager>();
+                    if (instance == null)
+                    {
+                        GameObject go = new GameObject("FogOfWarManager");
+                        instance = go.AddComponent<FogOfWarManager>();
+                    }
+                }
+                return instance;
+            }
+        }
 
         [Header("Map Settings")]
         [SerializeField] private Vector2 mapMin = new Vector2(-100f, -100f);
@@ -23,24 +41,23 @@ namespace RTSFramework.Fog
 
         public bool IsCheatRevealed => isCheatRevealed;
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void InitializeOnLoad()
+        private void Awake()
         {
-            if (Instance == null)
+            if (instance == null)
             {
-                new GameObject("FogOfWarManager", typeof(FogOfWarManager));
+                instance = this;
+            }
+            else if (instance != this)
+            {
+                Destroy(gameObject);
             }
         }
 
-        private void Awake()
+        private void OnDestroy()
         {
-            if (Instance == null)
+            if (instance == this)
             {
-                Instance = this;
-            }
-            else
-            {
-                Destroy(gameObject);
+                instance = null;
             }
         }
 

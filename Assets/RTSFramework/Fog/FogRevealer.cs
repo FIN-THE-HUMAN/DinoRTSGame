@@ -31,7 +31,7 @@ namespace RTSFramework.Fog
 
         private void OnDisable()
         {
-            if (FogOfWarManager.Instance != null)
+            if (FogOfWarManager.HasInstance)
             {
                 FogOfWarManager.Instance.UnregisterRevealer(this);
             }

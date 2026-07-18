@@ -112,6 +112,9 @@ namespace RTSFramework.Buildings
             }
         }
 
+        public static event Action<Building> OnBuildingSpawned;
+        public static event Action<Building> OnBuildingDestroyed;
+
         private void Start()
         {
             SelectionManager.RegisterSelectable(this);
@@ -134,6 +137,8 @@ namespace RTSFramework.Buildings
                     gameObject.AddComponent<RTSFramework.Fog.FogReceiver>();
                 }
             }
+
+            OnBuildingSpawned?.Invoke(this);
         }
 
         private void ApplyFactionColor()
@@ -157,6 +162,7 @@ namespace RTSFramework.Buildings
         private void OnDestroy()
         {
             SelectionManager.UnregisterSelectable(this);
+            OnBuildingDestroyed?.Invoke(this);
         }
 
         public void Initialize(BuildingData data)
