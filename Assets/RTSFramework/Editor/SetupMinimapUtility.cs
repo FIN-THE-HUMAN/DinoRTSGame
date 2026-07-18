@@ -143,11 +143,16 @@ namespace RTSFramework.Editor
 
             var rawImage = rawImageObj.GetComponent<RawImage>();
             if (rawImage == null) rawImage = rawImageObj.AddComponent<RawImage>();
+            rawImage.color = new Color(0.15f, 0.15f, 0.15f, 1f); // Dark gray placeholder in Editor
 
             // Attach interactive RTSMinimap component
             var minimap = rawImageObj.GetComponent<RTSMinimap>();
             if (minimap == null) minimap = rawImageObj.AddComponent<RTSMinimap>();
 
+            // Hide the panel by default in Edit Mode so the viewport is clean
+            minimapPanel.SetActive(false);
+
+            EditorUtility.SetDirty(minimapPanel);
             UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene());
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();

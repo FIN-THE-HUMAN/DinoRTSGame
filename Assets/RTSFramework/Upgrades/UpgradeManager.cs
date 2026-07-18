@@ -6,30 +6,47 @@ namespace RTSFramework.Upgrades
 {
     public class UpgradeManager : MonoBehaviour
     {
-        public static UpgradeManager Instance { get; private set; }
-
         private Dictionary<Faction, HashSet<UpgradeData>> completedUpgrades = new Dictionary<Faction, HashSet<UpgradeData>>();
 
         public event System.Action<Faction, UpgradeData> OnUpgradeCompleted;
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void InitializeOnLoad()
+        private static UpgradeManager instance;
+        public static bool HasInstance => instance != null;
+
+        public static UpgradeManager Instance
         {
-            if (Instance == null)
+            get
             {
-                new GameObject("UpgradeManager", typeof(UpgradeManager));
+                if (instance == null)
+                {
+                    instance = Object.FindAnyObjectByType<UpgradeManager>();
+                    if (instance == null)
+                    {
+                        GameObject go = new GameObject("UpgradeManager");
+                        instance = go.AddComponent<UpgradeManager>();
+                    }
+                }
+                return instance;
             }
         }
 
         private void Awake()
         {
-            if (Instance == null)
+            if (instance == null)
             {
-                Instance = this;
+                instance = this;
             }
-            else
+            else if (instance != this)
             {
                 Destroy(gameObject);
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (instance == this)
+            {
+                instance = null;
             }
         }
 

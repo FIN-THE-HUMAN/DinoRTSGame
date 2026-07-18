@@ -282,8 +282,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: RTSFramework::RTSFramework.Upgrades.TechnologyResearchComponent
   researchableUpgrades:
-  - {fileID: 11400000, guid: b30659f3973bf4a4dbccf1e53d448dfe, type: 2}
-  - {fileID: 11400000, guid: bd7a48b463dffa34cb98ad8b23318462, type: 2}
+  - {fileID: 11400000, guid: 13062914c5faa0a458c0ea8840e11dbd, type: 2}
+  - {fileID: 11400000, guid: 66a59e524cf2c58469d0cbca2823b474, type: 2}
+  - {fileID: 11400000, guid: 22e445124e84cac4398f8288aec0ca5d, type: 2}
   queueMaxSize: 5
 --- !u!114 &8751211195235427911
 MonoBehaviour:

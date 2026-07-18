@@ -66,6 +66,10 @@ namespace RTSFramework.Editor
             serGm.FindProperty("defeatQuitButton").objectReferenceValue = defQuitBtn;
             serGm.ApplyModifiedProperties();
 
+            // Hide the panels by default so they do not cover the editor viewport
+            vicPanel.SetActive(false);
+            defPanel.SetActive(false);
+
             // Mark Scene and Asset Database dirty to ensure changes save
             EditorUtility.SetDirty(gm);
             UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(gmObj.scene);

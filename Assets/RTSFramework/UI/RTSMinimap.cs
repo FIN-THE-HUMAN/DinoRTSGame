@@ -71,7 +71,9 @@ namespace RTSFramework.UI
             minimapCamera.targetTexture = rt;
 
             // 4. Output Render Texture to RawImage component
-            GetComponent<RawImage>().texture = rt;
+            var rawImg = GetComponent<RawImage>();
+            rawImg.texture = rt;
+            rawImg.color = Color.white; // Reset from editor dark preview color to full color at runtime
 
             isInitialized = true;
         }

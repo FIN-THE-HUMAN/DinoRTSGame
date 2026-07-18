@@ -72,7 +72,7 @@ namespace RTSFramework.Units
 
         private void OnDestroy()
         {
-            if (Upgrades.UpgradeManager.Instance != null)
+            if (Upgrades.UpgradeManager.HasInstance)
             {
                 Upgrades.UpgradeManager.Instance.OnUpgradeCompleted -= HandleUpgradeCompleted;
             }
