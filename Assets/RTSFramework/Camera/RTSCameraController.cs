@@ -20,17 +20,36 @@ namespace RTSFramework.CameraSystem
         [SerializeField] private float rotationSpeed = 100f;
         [SerializeField] private float rotationLerpSpeed = 10f;
 
+        public static RTSCameraController Instance { get; private set; }
+
         private Vector3 targetPosition;
         private Quaternion targetRotation;
+
+        private Vector3 visualPosition;
+        private Quaternion visualRotation;
 
         private Vector3 inputDirection;
         private float zoomInput;
         private float rotationInput;
 
+        // Shake parameters
+        private Vector3 shakeOffset;
+        private Vector3 shakeRotationOffset;
+        private float shakeTimeRemaining;
+        private float shakeIntensity;
+        private float shakeDuration;
+
+        private void Awake()
+        {
+            Instance = this;
+        }
+
         private void Start()
         {
             targetPosition = transform.position;
             targetRotation = transform.rotation;
+            visualPosition = transform.position;
+            visualRotation = transform.rotation;
         }
 
         private void Update()
@@ -39,7 +58,7 @@ namespace RTSFramework.CameraSystem
             CalculateMovement();
             CalculateZoom();
             CalculateRotation();
-            
+            UpdateShake();
             ApplyCameraTransforms();
         }
 
@@ -169,19 +188,87 @@ namespace RTSFramework.CameraSystem
             }
         }
 
-        private void ApplyCameraTransforms()
+        private void UpdateShake()
         {
-            // If rotating, snap position and rotation instantly to prevent lag/inertia drift
-            if (Mathf.Abs(rotationInput) > 0.01f)
+            if (shakeTimeRemaining > 0f)
             {
-                transform.position = targetPosition;
-                transform.rotation = targetRotation;
+                shakeTimeRemaining -= Time.unscaledDeltaTime;
+                float currentPower = shakeIntensity * (shakeTimeRemaining / shakeDuration);
+
+                // Add random vibration offsets
+                shakeOffset = Random.insideUnitSphere * currentPower;
+                shakeRotationOffset = new Vector3(
+                    Random.Range(-1f, 1f),
+                    Random.Range(-1f, 1f),
+                    Random.Range(-1f, 1f)
+                ) * (currentPower * 1.5f); // Scale rotation offset by 1.5 degrees per unit intensity
             }
             else
             {
-                // Smoothly lerp towards target position and rotation when moving/zooming normally
-                transform.position = Vector3.Lerp(transform.position, targetPosition, movementLerpSpeed * Time.deltaTime);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationLerpSpeed * Time.deltaTime);
+                shakeOffset = Vector3.zero;
+                shakeRotationOffset = Vector3.zero;
+            }
+        }
+
+        public Vector3 GetLookAtPoint()
+        {
+            Vector3 forward = transform.forward;
+            if (Mathf.Abs(forward.y) > 0.001f)
+            {
+                float distance = -transform.position.y / forward.y;
+                return transform.position + forward * distance;
+            }
+            return transform.position;
+        }
+
+        public void TriggerShake(Vector3 explosionPos, float intensity, float duration, float shakeRadius)
+        {
+            float d = Vector3.Distance(explosionPos, GetLookAtPoint());
+            float zoomFactor = (maxHeight - transform.position.y) / (maxHeight - minHeight); // 1 = zoomed in, 0 = zoomed out
+            float appliedIntensity = 0f;
+
+            // Dynamically calculate zoom requirements based on explosion radius
+            // Larger explosions (radius >= 50m) shake the screen at any zoom level
+            float minZoomRequired = Mathf.Clamp01(1f - (shakeRadius / 50f));
+
+            if (d <= shakeRadius && zoomFactor >= minZoomRequired)
+            {
+                float distScale = Mathf.Clamp01(1f - (d / shakeRadius));
+                float zoomScale = 1f;
+                if (minZoomRequired < 1f)
+                {
+                    // Scale zoom factor from minZoomRequired to 1.0f
+                    zoomScale = Mathf.Lerp(0.3f, 1.0f, (zoomFactor - minZoomRequired) / (1f - minZoomRequired));
+                }
+                appliedIntensity = intensity * distScale * zoomScale;
+            }
+
+            if (appliedIntensity > 0.01f)
+            {
+                // Take the maximum intensity if already shaking, and reset duration
+                shakeIntensity = Mathf.Max(shakeIntensity, appliedIntensity);
+                shakeDuration = duration;
+                shakeTimeRemaining = duration;
+            }
+        }
+
+        private void ApplyCameraTransforms()
+        {
+            if (Mathf.Abs(rotationInput) > 0.01f)
+            {
+                visualPosition = targetPosition;
+                visualRotation = targetRotation;
+
+                transform.position = visualPosition + shakeOffset;
+                transform.rotation = visualRotation * Quaternion.Euler(shakeRotationOffset);
+            }
+            else
+            {
+                visualPosition = Vector3.Lerp(visualPosition, targetPosition, movementLerpSpeed * Time.deltaTime);
+                visualRotation = Quaternion.Slerp(visualRotation, targetRotation, rotationLerpSpeed * Time.deltaTime);
+
+                transform.position = visualPosition + shakeOffset;
+                transform.rotation = visualRotation * Quaternion.Euler(shakeRotationOffset);
             }
         }
 

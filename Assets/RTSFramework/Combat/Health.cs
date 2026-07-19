@@ -18,6 +18,7 @@ namespace RTSFramework.Combat
         public float CurrentHealth => currentHealth;
         public float MaxHealth => finalMaxHealth > 0f ? finalMaxHealth : maxHealth;
         public bool IsDead => currentHealth <= 0f;
+        public RTSFramework.Factions.Faction Faction => faction;
 
         private float baseMaxHealth;
         private float finalMaxHealth;

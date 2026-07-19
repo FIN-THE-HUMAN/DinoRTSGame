@@ -219,6 +219,7 @@ MonoBehaviour:
   buildableBuildings:
   - {fileID: 11400000, guid: ce8c23efc9a08294e96b810ec25051c9, type: 2}
   - {fileID: 11400000, guid: 575cf75d388de754fa1f81e79a804cea, type: 2}
+  - {fileID: 11400000, guid: 1cf845ba96445de41a78ed37621b0a67, type: 2}
 --- !u!114 &6542665731051978852
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: RTSFramework::RTSFramework.Buildings.BuildingData
   buildingName: Defensive Tower
   maxHealth: 500
-  constructionTime: 15
+  constructionTime: 12
   cost:
   - resourceType: 3
     amount: 150

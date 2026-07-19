@@ -47,6 +47,30 @@ namespace RTSFramework.Buildings
         {
             ResetRallyPoint();
             SetupLineRenderer();
+
+            // Dynamically populate Town Hall trainable units based on faction
+            // This ensures both pre-placed scene town halls and constructed ones behave identically
+            if (building != null && building.BuildingData != null && building.BuildingData.BuildingName == "Town Hall")
+            {
+                trainableUnits.Clear();
+                if (building.Faction != null)
+                {
+                    if (building.Faction.IsPlayerFaction)
+                    {
+                        var worker = UnityEngine.Resources.Load<UnitData>("Units/PlayerUnitData");
+                        var archer = UnityEngine.Resources.Load<UnitData>("Units/PlayerRangedUnitData");
+                        if (worker != null) trainableUnits.Add(worker);
+                        if (archer != null) trainableUnits.Add(archer);
+                    }
+                    else
+                    {
+                        var worker = UnityEngine.Resources.Load<UnitData>("Units/EnemyUnitData");
+                        var archer = UnityEngine.Resources.Load<UnitData>("Units/EnemyRangedUnitData");
+                        if (worker != null) trainableUnits.Add(worker);
+                        if (archer != null) trainableUnits.Add(archer);
+                    }
+                }
+            }
         }
 
         private void SetupLineRenderer()

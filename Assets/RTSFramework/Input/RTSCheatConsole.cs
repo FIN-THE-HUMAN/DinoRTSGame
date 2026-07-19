@@ -234,6 +234,26 @@ namespace RTSFramework.Input
                     Debug.Log("Cheat: killed selected entities.");
                 }
             }
+            else if (cleanCmd == "boom")
+            {
+                var cam = RTSFramework.CameraSystem.RTSCameraController.Instance;
+                if (cam != null)
+                {
+                    Vector3 lookPoint = cam.GetLookAtPoint();
+                    cam.TriggerShake(lookPoint, 0.4f, 0.35f, 20f);
+                    Debug.Log($"Cheat: Triggered normal explosion shake at {lookPoint}.");
+                }
+            }
+            else if (cleanCmd == "superboom")
+            {
+                var cam = RTSFramework.CameraSystem.RTSCameraController.Instance;
+                if (cam != null)
+                {
+                    Vector3 lookPoint = cam.GetLookAtPoint();
+                    cam.TriggerShake(lookPoint, 0.9f, 0.7f, 80f);
+                    Debug.Log($"Cheat: Triggered super explosion shake at {lookPoint}.");
+                }
+            }
 
             CloseConsole();
         }

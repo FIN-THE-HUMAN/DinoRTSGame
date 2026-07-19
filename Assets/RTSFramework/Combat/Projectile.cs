@@ -100,7 +100,7 @@ namespace RTSFramework.Combat
             }
         }
 
-        private void OnHit()
+        protected virtual void OnHit()
         {
             if (target != null && !target.Equals(null))
             {
@@ -111,6 +111,12 @@ namespace RTSFramework.Combat
                 }
             }
 
+            PlayHitEffects();
+            Destroy(gameObject);
+        }
+
+        protected void PlayHitEffects()
+        {
             // Trigger particles
             if (hitEffectPrefab != null)
             {
@@ -122,8 +128,13 @@ namespace RTSFramework.Combat
             {
                 AudioSource.PlayClipAtPoint(hitSound, transform.position);
             }
-
-            Destroy(gameObject);
         }
+
+        // Protected properties for subclass access without modifying field serialization
+        protected GameObject Target => target;
+        protected float Damage => damage;
+        protected GameObject Attacker => attacker;
+        protected GameObject HitEffectPrefab => hitEffectPrefab;
+        protected AudioClip HitSound => hitSound;
     }
 }
