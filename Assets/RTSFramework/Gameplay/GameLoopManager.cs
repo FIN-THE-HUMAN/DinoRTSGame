@@ -41,6 +41,8 @@ namespace RTSFramework.Gameplay
         private List<Building> enemyBuildings = new List<Building>();
         private bool gameEnded = false;
 
+        public bool IsGameEnded => gameEnded;
+
         private void Awake()
         {
             if (Instance == null)
