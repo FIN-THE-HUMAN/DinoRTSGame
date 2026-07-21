@@ -118,12 +118,24 @@ namespace RTSFramework.Combat
                     {
                         proj.Initialize(target, attackDamage, gameObject);
                     }
+
+                    if (Audio.RTSAudioManager.Instance != null)
+                    {
+                        Audio.RTSAudioManager.Instance.PlayWeaponFireSound(spawnPos, true);
+                    }
+
                     Debug.Log($"{gameObject.name} fired projectile at {target.name}.");
                 }
                 else
                 {
                     // Melee Attack: Apply Damage Instantly
                     targetHealth.TakeDamage(attackDamage, gameObject);
+
+                    if (Audio.RTSAudioManager.Instance != null)
+                    {
+                        Audio.RTSAudioManager.Instance.PlayWeaponFireSound(transform.position, false);
+                    }
+
                     Debug.Log($"{gameObject.name} melee attacked {target.name} for {attackDamage} damage.");
                 }
             }

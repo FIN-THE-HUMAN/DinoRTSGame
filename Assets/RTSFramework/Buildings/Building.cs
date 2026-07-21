@@ -265,6 +265,12 @@ namespace RTSFramework.Buildings
             }
 
             ToggleFunctionality(true);
+
+            if (Audio.RTSAudioManager.Instance != null && IsPlayerOwned)
+            {
+                Audio.RTSAudioManager.Instance.PlayBuildingCompletedSound(transform.position);
+            }
+
             OnConstructionComplete?.Invoke();
             Debug.Log($"{gameObject.name} construction complete!");
         }

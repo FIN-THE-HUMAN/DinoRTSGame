@@ -155,6 +155,11 @@ namespace RTSFramework.Buildings
                 GameObject buildingObj = Instantiate(currentBuildingData.BuildingPrefab, position, Quaternion.identity);
                 Building building = buildingObj.GetComponent<Building>();
                 
+                if (Audio.RTSAudioManager.Instance != null)
+                {
+                    Audio.RTSAudioManager.Instance.PlayBuildingPlacedSound(position);
+                }
+
                 if (building != null)
                 {
                     building.Initialize(currentBuildingData);
@@ -196,10 +201,18 @@ namespace RTSFramework.Buildings
             Color tintColor = canPlace ? new Color(0f, 1f, 0f, 0.5f) : new Color(1f, 0f, 0f, 0.5f);
 
             var renderers = ghostInstance.GetComponentsInChildren<Renderer>();
+            Shader transparentShader = Shader.Find("Sprites/Default");
+            if (transparentShader == null) transparentShader = Shader.Find("Standard");
+
             foreach (var r in renderers)
             {
                 foreach (var mat in r.materials)
                 {
+                    if (transparentShader != null)
+                    {
+                        mat.shader = transparentShader;
+                    }
+
                     if (mat.HasProperty("_BaseColor"))
                     {
                         mat.SetColor("_BaseColor", tintColor);

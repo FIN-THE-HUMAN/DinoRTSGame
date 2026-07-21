@@ -166,7 +166,7 @@ namespace RTSFramework.Selection
                 {
                     if (Audio.RTSAudioManager.Instance != null)
                     {
-                        Audio.RTSAudioManager.Instance.PlayVoice(newLead.UnitData.SelectVoices);
+                        Audio.RTSAudioManager.Instance.PlayVoice(newLead.UnitData.SelectVoices, false);
                     }
                 }
             }

@@ -43,6 +43,10 @@ namespace RTSFramework.InputSystem
         private void Start()
         {
             mainCamera = Camera.main;
+            
+            // Force hollow green selection box visuals to avoid screen-space model tinting
+            boxColor = new Color(0f, 1f, 0f, 0f);
+            borderColor = new Color(0f, 1f, 0f, 0.7f);
         }
 
         private void Update()
@@ -63,7 +67,17 @@ namespace RTSFramework.InputSystem
             // Cheat console active: lock selection and command input
             if (RTSFramework.Input.RTSCheatConsole.Instance != null && RTSFramework.Input.RTSCheatConsole.Instance.IsOpen)
             {
-                isDragging = false;
+                if (isDragging)
+                {
+                    isDragging = false;
+                    foreach (var selectable in SelectionManager.AllSelectables)
+                    {
+                        if (selectable != null && selectable.GameObject.TryGetComponent<UnitController>(out var unit))
+                        {
+                            unit.SetHighlight(false);
+                        }
+                    }
+                }
                 return;
             }
 
@@ -156,8 +170,56 @@ namespace RTSFramework.InputSystem
                     }
                 }
 
+                // Clear all drag highlights on release
+                foreach (var selectable in SelectionManager.AllSelectables)
+                {
+                    if (selectable != null && selectable.GameObject.TryGetComponent<UnitController>(out var unit))
+                    {
+                        unit.SetHighlight(false);
+                    }
+                }
+
                 // Play selection voice response for the lead selected unit
                 PlayLeadVoice(false);
+            }
+
+            // Update real-time drag-selection highlight preview (only for player-owned units)
+            if (isDragging && !mouse.leftButton.wasReleasedThisFrame)
+            {
+                Vector2 currentMousePos = mouse.position.ReadValue();
+                if (Vector2.Distance(dragStartPosition, currentMousePos) >= 5f)
+                {
+                    Bounds viewportBounds = GetViewportBounds(mainCamera, dragStartPosition, currentMousePos);
+                    foreach (var selectable in SelectionManager.AllSelectables)
+                    {
+                        if (selectable == null || selectable.Equals(null)) continue;
+                        if (selectable.GameObject.TryGetComponent<UnitController>(out var unit))
+                        {
+                            Vector3 viewportPos = mainCamera.WorldToViewportPoint(selectable.Transform.position);
+                            bool isInside = viewportBounds.Contains(viewportPos);
+
+                            if (isInside && unit.IsPlayerOwned)
+                            {
+                                unit.SetHighlight(true);
+                            }
+                            else
+                            {
+                                unit.SetHighlight(false);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    // Clean up highlights if drag distance is too small
+                    foreach (var selectable in SelectionManager.AllSelectables)
+                    {
+                        if (selectable != null && selectable.GameObject.TryGetComponent<UnitController>(out var unit))
+                        {
+                            unit.SetHighlight(false);
+                        }
+                    }
+                }
             }
 
             // --- COMMANDS (Right Click) ---
@@ -363,7 +425,7 @@ namespace RTSFramework.InputSystem
                 var clips = isCommand ? leadUnit.UnitData.CommandVoices : leadUnit.UnitData.SelectVoices;
                 if (Audio.RTSAudioManager.Instance != null)
                 {
-                    Audio.RTSAudioManager.Instance.PlayVoice(clips);
+                    Audio.RTSAudioManager.Instance.PlayVoice(clips, isCommand);
                 }
             }
         }

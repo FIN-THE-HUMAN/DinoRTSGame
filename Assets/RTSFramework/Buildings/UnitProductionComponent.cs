@@ -104,11 +104,11 @@ namespace RTSFramework.Buildings
                 return;
             }
 
-            // Toggle rally line visual based on selection
+            // Toggle rally line visual based on selection (only for player-owned buildings)
             if (lineRenderer != null)
             {
                 bool isSelected = false;
-                if (SelectionManager.Instance != null)
+                if (building != null && building.IsPlayerOwned && SelectionManager.Instance != null)
                 {
                     for (int i = 0; i < SelectionManager.Instance.SelectedObjects.Count; i++)
                     {
@@ -233,6 +233,11 @@ namespace RTSFramework.Buildings
             trainingProgress = 0f;
 
             SpawnUnit(trained);
+
+            if (Audio.RTSAudioManager.Instance != null && building != null && building.IsPlayerOwned)
+            {
+                Audio.RTSAudioManager.Instance.PlayUnitTrainedSound(transform.position);
+            }
 
             OnQueueChanged?.Invoke();
         }

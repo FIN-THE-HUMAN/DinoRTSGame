@@ -299,7 +299,11 @@ namespace RTSFramework.UI
 
             currentResolutionIndex = (currentResolutionIndex + 1) % resolutionsList.Count;
             CustomResolution r = resolutionsList[currentResolutionIndex];
+            
+            #if !UNITY_EDITOR
             Screen.SetResolution(r.width, r.height, isFullscreen);
+            #endif
+
             UpdateResolutionButtonText();
         }
 

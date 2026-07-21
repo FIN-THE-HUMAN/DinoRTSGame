@@ -46,6 +46,14 @@ namespace RTSFramework.CameraSystem
 
         private void Start()
         {
+            Camera cam = GetComponent<Camera>();
+            if (cam == null) cam = Camera.main;
+            if (cam != null)
+            {
+                cam.clearFlags = CameraClearFlags.SolidColor;
+                cam.backgroundColor = new Color(0.12f, 0.13f, 0.16f);
+            }
+
             targetPosition = transform.position;
             targetRotation = transform.rotation;
             visualPosition = transform.position;

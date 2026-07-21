@@ -141,6 +141,24 @@ namespace RTSFramework.Combat
             OnHealthChanged?.Invoke(currentHealth, MaxHealth);
             OnDamageTaken?.Invoke(actualDamage, attacker);
 
+            if (Audio.RTSAudioManager.Instance != null)
+            {
+                bool eitherIsPlayer = (faction != null && faction.IsPlayerFaction);
+                if (!eitherIsPlayer && attacker != null)
+                {
+                    var attHealth = attacker.GetComponent<Health>();
+                    if (attHealth != null && attHealth.Faction != null && attHealth.Faction.IsPlayerFaction)
+                    {
+                        eitherIsPlayer = true;
+                    }
+                }
+
+                if (eitherIsPlayer)
+                {
+                    Audio.RTSAudioManager.Instance.NotifyCombatEvent();
+                }
+            }
+
             if (currentHealth <= 0f)
             {
                 Die();
@@ -170,6 +188,12 @@ namespace RTSFramework.Combat
 
         private void Die()
         {
+            if (Audio.RTSAudioManager.Instance != null)
+            {
+                bool isUnit = GetComponent<Units.UnitController>() != null;
+                Audio.RTSAudioManager.Instance.PlayDeathSound(transform.position, isUnit);
+            }
+
             OnDeath?.Invoke();
             Destroy(gameObject);
         }

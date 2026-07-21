@@ -212,6 +212,55 @@ namespace RTSFramework.Units
         public void SetFaction(Factions.Faction newFaction)
         {
             this.faction = newFaction;
+            ApplyFactionColor();
+        }
+
+        private Dictionary<Renderer, Color[]> originalColors = new Dictionary<Renderer, Color[]>();
+
+        public void SetHighlight(bool highlight)
+        {
+            var renderers = GetComponentsInChildren<Renderer>();
+            foreach (var r in renderers)
+            {
+                if (selectionVisual != null && r.gameObject == selectionVisual) continue;
+
+                if (highlight)
+                {
+                    if (!originalColors.ContainsKey(r))
+                    {
+                        var mats = r.materials;
+                        Color[] colors = new Color[mats.Length];
+                        for (int i = 0; i < mats.Length; i++)
+                        {
+                            if (mats[i].HasProperty("_BaseColor")) colors[i] = mats[i].GetColor("_BaseColor");
+                            else if (mats[i].HasProperty("_Color")) colors[i] = mats[i].GetColor("_Color");
+                            else colors[i] = Color.white;
+                        }
+                        originalColors[r] = colors;
+                    }
+
+                    var materials = r.materials;
+                    for (int i = 0; i < materials.Length; i++)
+                    {
+                        Color orig = originalColors[r][i];
+                        Color highlightColor = Color.Lerp(orig, Color.white, 0.12f);
+                        if (materials[i].HasProperty("_BaseColor")) materials[i].SetColor("_BaseColor", highlightColor);
+                        else if (materials[i].HasProperty("_Color")) materials[i].SetColor("_Color", highlightColor);
+                    }
+                }
+                else
+                {
+                    if (originalColors.TryGetValue(r, out Color[] colors))
+                    {
+                        var materials = r.materials;
+                        for (int i = 0; i < materials.Length; i++)
+                        {
+                            if (materials[i].HasProperty("_BaseColor")) materials[i].SetColor("_BaseColor", colors[i]);
+                            else if (materials[i].HasProperty("_Color")) materials[i].SetColor("_Color", colors[i]);
+                        }
+                    }
+                }
+            }
         }
     }
 }
