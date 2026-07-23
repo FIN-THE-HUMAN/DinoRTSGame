@@ -25,6 +25,30 @@ namespace RTSFramework.InputSystem
         private Vector2 dragStartPosition;
         private bool isDragging;
 
+        public static RTSInputController Instance { get; private set; }
+
+        private bool isAttackMoveMode = false;
+        private bool isGuardMode = false;
+
+        public void StartAttackMoveMode()
+        {
+            isAttackMoveMode = true;
+            isGuardMode = false;
+            Debug.Log("Attack-Move mode active. Right-click on the terrain to target.");
+        }
+
+        public void StartGuardMode()
+        {
+            isGuardMode = true;
+            isAttackMoveMode = false;
+            Debug.Log("Guard mode active. Right-click on the terrain to guard.");
+        }
+
+        private void Awake()
+        {
+            Instance = this;
+        }
+
         private static Texture2D whiteTexture;
         private static Texture2D WhiteTexture
         {
@@ -84,6 +108,13 @@ namespace RTSFramework.InputSystem
             var mouse = Mouse.current;
             var keyboard = Keyboard.current;
             if (mouse == null) return;
+
+            // Cancel placement modes on Escape
+            if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame)
+            {
+                isAttackMoveMode = false;
+                isGuardMode = false;
+            }
 
             // --- SELECTION (Left Click & Drag) ---
             if (mouse.leftButton.wasPressedThisFrame)
@@ -222,12 +253,56 @@ namespace RTSFramework.InputSystem
                 }
             }
 
+            // --- CONTROL GROUPS (Ctrl + 1-9/0 to Assign, 1-9/0 to Recall) ---
+            if (keyboard != null && (RTSFramework.Input.RTSCheatConsole.Instance == null || !RTSFramework.Input.RTSCheatConsole.Instance.IsOpen))
+            {
+                UnityEngine.InputSystem.Key[] digitKeys = new UnityEngine.InputSystem.Key[]
+                {
+                    UnityEngine.InputSystem.Key.Digit1, UnityEngine.InputSystem.Key.Digit2, UnityEngine.InputSystem.Key.Digit3,
+                    UnityEngine.InputSystem.Key.Digit4, UnityEngine.InputSystem.Key.Digit5, UnityEngine.InputSystem.Key.Digit6,
+                    UnityEngine.InputSystem.Key.Digit7, UnityEngine.InputSystem.Key.Digit8, UnityEngine.InputSystem.Key.Digit9,
+                    UnityEngine.InputSystem.Key.Digit0
+                };
+
+                bool isCtrlHeld = keyboard.ctrlKey.isPressed || keyboard.leftCtrlKey.isPressed;
+
+                for (int i = 0; i < digitKeys.Length; i++)
+                {
+                    var keyControl = keyboard[digitKeys[i]];
+                    if (keyControl.wasPressedThisFrame)
+                    {
+                        if (isCtrlHeld)
+                        {
+                            SelectionManager.Instance.AssignControlGroup(i);
+                        }
+                        else
+                        {
+                            SelectionManager.Instance.RecallControlGroup(i);
+                        }
+                        break;
+                    }
+                }
+            }
+
             // --- COMMANDS (Right Click) ---
             if (mouse.rightButton.wasPressedThisFrame)
             {
                 var eventSystem = UnityEngine.EventSystems.EventSystem.current;
                 if (eventSystem != null && eventSystem.IsPointerOverGameObject())
                 {
+                    return;
+                }
+
+                if (isAttackMoveMode)
+                {
+                    isAttackMoveMode = false;
+                    IssueAttackMoveCommand(mouse.position.ReadValue());
+                    return;
+                }
+                if (isGuardMode)
+                {
+                    isGuardMode = false;
+                    IssueGuardCommand(mouse.position.ReadValue());
                     return;
                 }
                 Ray ray = mainCamera.ScreenPointToRay(mouse.position.ReadValue());
@@ -493,5 +568,61 @@ namespace RTSFramework.InputSystem
         }
 
         #endregion
+
+        private void IssueAttackMoveCommand(Vector2 screenPos)
+        {
+            Ray ray = mainCamera.ScreenPointToRay(screenPos);
+            if (Physics.Raycast(ray, out RaycastHit hit, 1000f, terrainLayer))
+            {
+                bool isQueueing = Keyboard.current != null && (Keyboard.current.shiftKey.isPressed || Keyboard.current.leftShiftKey.isPressed);
+                bool commandIssued = false;
+
+                foreach (var selected in SelectionManager.Instance.SelectedObjects)
+                {
+                    if (selected == null || selected.Equals(null)) continue;
+                    if (selected.GameObject.TryGetComponent<UnitController>(out var unit))
+                    {
+                        if (unit.IsPlayerOwned)
+                        {
+                            unit.GiveCommand(new AttackMoveCommand(hit.point), isQueueing);
+                            commandIssued = true;
+                        }
+                    }
+                }
+
+                if (commandIssued)
+                {
+                    PlayLeadVoice(true);
+                }
+            }
+        }
+
+        private void IssueGuardCommand(Vector2 screenPos)
+        {
+            Ray ray = mainCamera.ScreenPointToRay(screenPos);
+            if (Physics.Raycast(ray, out RaycastHit hit, 1000f, terrainLayer))
+            {
+                bool isQueueing = Keyboard.current != null && (Keyboard.current.shiftKey.isPressed || Keyboard.current.leftShiftKey.isPressed);
+                bool commandIssued = false;
+
+                foreach (var selected in SelectionManager.Instance.SelectedObjects)
+                {
+                    if (selected == null || selected.Equals(null)) continue;
+                    if (selected.GameObject.TryGetComponent<UnitController>(out var unit))
+                    {
+                        if (unit.IsPlayerOwned)
+                        {
+                            unit.GiveCommand(new GuardCommand(hit.point), isQueueing);
+                            commandIssued = true;
+                        }
+                    }
+                }
+
+                if (commandIssued)
+                {
+                    PlayLeadVoice(true);
+                }
+            }
+        }
     }
 }

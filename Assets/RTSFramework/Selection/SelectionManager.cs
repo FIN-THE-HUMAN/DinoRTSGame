@@ -35,11 +35,19 @@ namespace RTSFramework.Selection
 
         private readonly Dictionary<ISelectable, System.Action> deathSubscriptions = new Dictionary<ISelectable, System.Action>();
 
+        private readonly List<ISelectable>[] controlGroups = new List<ISelectable>[10];
+        private float[] lastRecallTimes = new float[10];
+        private const float doubleTapTimeThreshold = 0.3f;
+
         private void Awake()
         {
             if (Instance == null)
             {
                 Instance = this;
+                for (int i = 0; i < 10; i++)
+                {
+                    controlGroups[i] = new List<ISelectable>();
+                }
             }
             else
             {
@@ -170,6 +178,66 @@ namespace RTSFramework.Selection
                     }
                 }
             }
+        }
+
+        public void AssignControlGroup(int groupIndex)
+        {
+            if (groupIndex < 0 || groupIndex >= 10) return;
+
+            controlGroups[groupIndex].Clear();
+            foreach (var selectable in selectedObjects)
+            {
+                if (selectable != null && !selectable.Equals(null))
+                {
+                    controlGroups[groupIndex].Add(selectable);
+                }
+            }
+
+            Debug.Log($"Control Group {groupIndex + 1} assigned with {controlGroups[groupIndex].Count} objects.");
+        }
+
+        public void RecallControlGroup(int groupIndex)
+        {
+            if (groupIndex < 0 || groupIndex >= 10) return;
+
+            // Remove null/destroyed references
+            controlGroups[groupIndex].RemoveAll(item => item == null || item.Equals(null));
+
+            if (controlGroups[groupIndex].Count == 0) return;
+
+            // Select group
+            ClearSelection();
+            foreach (var selectable in controlGroups[groupIndex])
+            {
+                Select(selectable, false);
+            }
+
+            // Double tap camera focus check
+            float timeSinceLastRecall = Time.time - lastRecallTimes[groupIndex];
+            if (timeSinceLastRecall < doubleTapTimeThreshold)
+            {
+                Vector3 averagePos = Vector3.zero;
+                int validCount = 0;
+                foreach (var selectable in controlGroups[groupIndex])
+                {
+                    if (selectable != null && !selectable.Equals(null))
+                    {
+                        averagePos += selectable.Transform.position;
+                        validCount++;
+                    }
+                }
+
+                if (validCount > 0)
+                {
+                    averagePos /= validCount;
+                    if (RTSFramework.CameraSystem.RTSCameraController.Instance != null)
+                    {
+                        RTSFramework.CameraSystem.RTSCameraController.Instance.FocusOn(averagePos);
+                    }
+                }
+            }
+
+            lastRecallTimes[groupIndex] = Time.time;
         }
     }
 }

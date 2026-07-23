@@ -295,5 +295,11 @@ namespace RTSFramework.CameraSystem
                 targetPosition = new Vector3(newWorldPosition.x, targetPosition.y, newWorldPosition.z);
             }
         }
+
+        public void FocusOn(Vector3 newWorldPosition)
+        {
+            SetTargetPosition(newWorldPosition);
+            visualPosition = targetPosition; // Instant snap
+        }
     }
 }

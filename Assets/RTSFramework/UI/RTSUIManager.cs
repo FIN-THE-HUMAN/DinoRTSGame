@@ -30,6 +30,7 @@ namespace RTSFramework.UI
 
         private UnitProductionComponent activeProducer;
         private TechnologyResearchComponent activeResearcher;
+        private GameObject commandsPanel;
 
         private Dictionary<Button, UnitData> unitButtons = new Dictionary<Button, UnitData>();
         private Dictionary<Button, UpgradeData> upgradeButtons = new Dictionary<Button, UpgradeData>();
@@ -48,6 +49,29 @@ namespace RTSFramework.UI
 
         private void Start()
         {
+            // Create and configure commandsPanel
+            if (commandsPanel == null && selectionPanel != null)
+            {
+                commandsPanel = new GameObject("CommandsPanel", typeof(RectTransform));
+                commandsPanel.transform.SetParent(selectionPanel.transform, false);
+                var grid = commandsPanel.AddComponent<GridLayoutGroup>();
+                grid.cellSize = new Vector2(55f, 55f);
+                grid.spacing = new Vector2(6f, 6f);
+                grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+                grid.constraintCount = 4;
+                grid.childAlignment = TextAnchor.UpperLeft;
+                
+                var rt = commandsPanel.GetComponent<RectTransform>();
+                rt.anchorMin = new Vector2(1f, 0.5f);
+                rt.anchorMax = new Vector2(1f, 0.5f);
+                rt.pivot = new Vector2(1f, 0.5f);
+                rt.anchoredPosition = new Vector2(-300f, 0f); // Middle-Left position
+                rt.sizeDelta = new Vector2(120f, 115f);
+                rt.localScale = Vector3.one;
+                
+                commandsPanel.SetActive(false);
+            }
+
             // Configure buildPanel to use a 2-column Grid Layout
             if (buildPanel != null)
             {
@@ -65,7 +89,7 @@ namespace RTSFramework.UI
                 grid.cellSize = new Vector2(55f, 55f);
                 grid.spacing = new Vector2(6f, 6f);
                 grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-                grid.constraintCount = 4;
+                grid.constraintCount = 2; // 2 columns
                 grid.childAlignment = TextAnchor.UpperLeft;
             }
 
@@ -86,7 +110,7 @@ namespace RTSFramework.UI
                 grid.cellSize = new Vector2(55f, 55f);
                 grid.spacing = new Vector2(6f, 6f);
                 grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-                grid.constraintCount = 4;
+                grid.constraintCount = 2; // 2 columns
                 grid.childAlignment = TextAnchor.UpperLeft;
             }
 
@@ -230,7 +254,7 @@ namespace RTSFramework.UI
                 }
             }
 
-            // 3. Position BuildPanel and ProductionPanel on the right side of the bar
+            // 3. Position panels in different locations on the right side of the bottom bar
             if (buildPanel != null)
             {
                 buildPanel.transform.SetParent(selectionPanel.transform, false);
@@ -240,8 +264,8 @@ namespace RTSFramework.UI
                     bRt.anchorMin = new Vector2(1f, 0.5f);
                     bRt.anchorMax = new Vector2(1f, 0.5f);
                     bRt.pivot = new Vector2(1f, 0.5f);
-                    bRt.anchoredPosition = new Vector2(-25f, 0f);
-                    bRt.sizeDelta = new Vector2(250f, 100f);
+                    bRt.anchoredPosition = new Vector2(-20f, 0f); // Rightmost
+                    bRt.sizeDelta = new Vector2(120f, 115f);
                 }
             }
 
@@ -254,8 +278,22 @@ namespace RTSFramework.UI
                     pRt.anchorMin = new Vector2(1f, 0.5f);
                     pRt.anchorMax = new Vector2(1f, 0.5f);
                     pRt.pivot = new Vector2(1f, 0.5f);
-                    pRt.anchoredPosition = new Vector2(-25f, 0f);
-                    pRt.sizeDelta = new Vector2(250f, 100f);
+                    pRt.anchoredPosition = new Vector2(-160f, 0f); // Middle-Right
+                    pRt.sizeDelta = new Vector2(120f, 115f);
+                }
+            }
+
+            if (commandsPanel != null)
+            {
+                commandsPanel.transform.SetParent(selectionPanel.transform, false);
+                var cRt = commandsPanel.GetComponent<RectTransform>();
+                if (cRt != null)
+                {
+                    cRt.anchorMin = new Vector2(1f, 0.5f);
+                    cRt.anchorMax = new Vector2(1f, 0.5f);
+                    cRt.pivot = new Vector2(1f, 0.5f);
+                    cRt.anchoredPosition = new Vector2(-300f, 0f); // Middle-Left
+                    cRt.sizeDelta = new Vector2(120f, 115f);
                 }
             }
         }
@@ -504,6 +542,7 @@ namespace RTSFramework.UI
                 selectionPanel.SetActive(false);
                 if (buildPanel != null) buildPanel.SetActive(false);
                 if (productionPanel != null) productionPanel.SetActive(false);
+                if (commandsPanel != null) commandsPanel.SetActive(false);
                 activeProducer = null;
                 unitButtons.Clear();
                 upgradeButtons.Clear();
@@ -579,7 +618,15 @@ namespace RTSFramework.UI
                 }
             }
 
-            // --- BUILD PANEL POPULATION ---
+            // --- DYNAMIC COMMANDS AND BUILD PANEL POPULATION ---
+            if (commandsPanel != null)
+            {
+                foreach (Transform child in commandsPanel.transform)
+                {
+                    Destroy(child.gameObject);
+                }
+            }
+
             if (buildPanel != null)
             {
                 foreach (Transform child in buildPanel.transform)
@@ -588,47 +635,133 @@ namespace RTSFramework.UI
                 }
             }
 
+            bool isPlayerOwnedUnit = leadSelectable.IsPlayerOwned && unit != null;
             var builder = leadSelectable.GameObject.GetComponent<BuilderComponent>();
-            if (builder != null && buildPanel != null && buildButtonPrefab != null)
+
+            if (isPlayerOwnedUnit)
             {
-                buildPanel.SetActive(true);
-                foreach (var bData in builder.BuildableBuildings)
+                // 1. Show and populate commandsPanel
+                if (commandsPanel != null && buildButtonPrefab != null)
                 {
-                    if (bData == null) continue;
+                    commandsPanel.SetActive(true);
 
-                    GameObject buttonObj = Instantiate(buildButtonPrefab, buildPanel.transform);
-                    var text = buttonObj.GetComponentInChildren<TMP_Text>();
-                    if (text != null)
+                    // Action: Attack-Move
+                    GameObject btnAttackMove = Instantiate(buildButtonPrefab, commandsPanel.transform);
+                    var textAM = btnAttackMove.GetComponentInChildren<TMP_Text>();
+                    if (textAM != null)
                     {
-                        text.text = bData.BuildingName;
+                        textAM.text = "Атака в движении";
+                        textAM.fontSize = 8f;
+                        textAM.alignment = TextAlignmentOptions.Center;
                     }
-
-                    var button = buttonObj.GetComponent<Button>();
-                    if (button != null)
+                    var btnAM = btnAttackMove.GetComponent<Button>();
+                    if (btnAM != null)
                     {
-                        var data = bData;
-                        button.onClick.AddListener(() =>
+                        btnAM.onClick.AddListener(() =>
                         {
-                            if (BuildingSystem.Instance != null)
+                            if (RTSFramework.InputSystem.RTSInputController.Instance != null)
                             {
-                                BuildingSystem.Instance.StartPlacement(data);
+                                RTSFramework.InputSystem.RTSInputController.Instance.StartAttackMoveMode();
                             }
                         });
-                        
-                        // Treat build buttons as simple text buttons of 55x55 size
+                    }
+
+                    // Action: Guard
+                    GameObject btnGuard = Instantiate(buildButtonPrefab, commandsPanel.transform);
+                    var textG = btnGuard.GetComponentInChildren<TMP_Text>();
+                    if (textG != null)
+                    {
+                        textG.text = "Охрана";
+                        textG.fontSize = 8f;
+                        textG.alignment = TextAlignmentOptions.Center;
+                    }
+                    var btnG = btnGuard.GetComponent<Button>();
+                    if (btnG != null)
+                    {
+                        btnG.onClick.AddListener(() =>
+                        {
+                            if (RTSFramework.InputSystem.RTSInputController.Instance != null)
+                            {
+                                RTSFramework.InputSystem.RTSInputController.Instance.StartGuardMode();
+                            }
+                        });
+                    }
+                }
+
+                // 2. Show and populate buildPanel only if worker/builder
+                if (builder != null && buildPanel != null && buildButtonPrefab != null)
+                {
+                    buildPanel.SetActive(true);
+                    foreach (var bData in builder.BuildableBuildings)
+                    {
+                        if (bData == null) continue;
+
+                        GameObject buttonObj = Instantiate(buildButtonPrefab, buildPanel.transform);
+                        var text = buttonObj.GetComponentInChildren<TMP_Text>();
                         if (text != null)
                         {
+                            text.text = bData.BuildingName;
                             text.fontSize = 8f;
                             text.alignment = TextAlignmentOptions.Center;
                         }
+
+                        var button = buttonObj.GetComponent<Button>();
+                        if (button != null)
+                        {
+                            var data = bData;
+                            button.onClick.AddListener(() =>
+                            {
+                                if (BuildingSystem.Instance != null)
+                                {
+                                    BuildingSystem.Instance.StartPlacement(data);
+                                }
+                            });
+                        }
                     }
+                }
+                else
+                {
+                    if (buildPanel != null) buildPanel.SetActive(false);
                 }
             }
             else
             {
-                if (buildPanel != null)
+                // Not a player unit (neutral/enemy unit or building)
+                if (commandsPanel != null) commandsPanel.SetActive(false);
+
+                if (builder != null && buildPanel != null && buildButtonPrefab != null)
                 {
-                    buildPanel.SetActive(false);
+                    buildPanel.SetActive(true);
+                    foreach (var bData in builder.BuildableBuildings)
+                    {
+                        if (bData == null) continue;
+
+                        GameObject buttonObj = Instantiate(buildButtonPrefab, buildPanel.transform);
+                        var text = buttonObj.GetComponentInChildren<TMP_Text>();
+                        if (text != null)
+                        {
+                            text.text = bData.BuildingName;
+                            text.fontSize = 8f;
+                            text.alignment = TextAlignmentOptions.Center;
+                        }
+
+                        var button = buttonObj.GetComponent<Button>();
+                        if (button != null)
+                        {
+                            var data = bData;
+                            button.onClick.AddListener(() =>
+                            {
+                                if (BuildingSystem.Instance != null)
+                                {
+                                    BuildingSystem.Instance.StartPlacement(data);
+                                }
+                            });
+                        }
+                    }
+                }
+                else
+                {
+                    if (buildPanel != null) buildPanel.SetActive(false);
                 }
             }
 
