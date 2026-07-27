@@ -253,6 +253,35 @@ namespace RTSFramework.InputSystem
                 }
             }
 
+            // --- COMMAND HOTKEYS (A for Attack-Move, D for Guard) ---
+            if (keyboard != null && (RTSFramework.Input.RTSCheatConsole.Instance == null || !RTSFramework.Input.RTSCheatConsole.Instance.IsOpen))
+            {
+                bool hasPlayerUnitsSelected = false;
+                if (SelectionManager.Instance != null)
+                {
+                    foreach (var sel in SelectionManager.Instance.SelectedObjects)
+                    {
+                        if (sel.IsPlayerOwned && sel.GameObject.GetComponent<UnitController>() != null)
+                        {
+                            hasPlayerUnitsSelected = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (hasPlayerUnitsSelected)
+                {
+                    if (keyboard.aKey.wasPressedThisFrame)
+                    {
+                        StartAttackMoveMode();
+                    }
+                    if (keyboard.dKey.wasPressedThisFrame)
+                    {
+                        StartGuardMode();
+                    }
+                }
+            }
+
             // --- CONTROL GROUPS (Ctrl + 1-9/0 to Assign, 1-9/0 to Recall) ---
             if (keyboard != null && (RTSFramework.Input.RTSCheatConsole.Instance == null || !RTSFramework.Input.RTSCheatConsole.Instance.IsOpen))
             {

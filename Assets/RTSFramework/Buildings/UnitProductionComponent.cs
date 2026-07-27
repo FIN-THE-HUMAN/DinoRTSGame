@@ -224,6 +224,51 @@ namespace RTSFramework.Buildings
             Debug.Log("Canceled training of: " + canceled.UnitName + " and refunded cost.");
         }
 
+        public void CancelLastOfUnitType(UnitData unitData)
+        {
+            if (unitData == null || trainingQueue.Count == 0) return;
+
+            List<UnitData> temp = new List<UnitData>(trainingQueue);
+            int targetIndex = -1;
+            for (int i = temp.Count - 1; i >= 0; i--)
+            {
+                if (temp[i] == unitData)
+                {
+                    targetIndex = i;
+                    break;
+                }
+            }
+
+            if (targetIndex != -1)
+            {
+                UnitData canceled = temp[targetIndex];
+                temp.RemoveAt(targetIndex);
+
+                // Rebuild queue
+                trainingQueue.Clear();
+                foreach (var item in temp)
+                {
+                    trainingQueue.Enqueue(item);
+                }
+
+                // Refund resources
+                foreach (var c in canceled.Cost)
+                {
+                    ResourceManager.Instance.AddResource(building.Faction, c.resourceType, c.amount);
+                }
+
+                // Reset time if we canceled the current active unit (index 0)
+                if (targetIndex == 0)
+                {
+                    currentUnitTimeElapsed = 0f;
+                    trainingProgress = 0f;
+                }
+
+                OnQueueChanged?.Invoke();
+                Debug.Log("Canceled training of: " + canceled.UnitName + " and refunded cost.");
+            }
+        }
+
         private void CompleteTraining()
         {
             if (trainingQueue.Count == 0) return;

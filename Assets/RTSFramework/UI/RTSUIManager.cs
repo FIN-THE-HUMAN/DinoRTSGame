@@ -805,6 +805,19 @@ namespace RTSFramework.UI
                                 producer.TryQueueUnit(data);
                             });
 
+                            // Add Right-Click cancel support
+                            var clickReceiver = btnObj.AddComponent<RTSButtonRightClickReceiver>();
+                            if (clickReceiver != null)
+                            {
+                                clickReceiver.OnRightClick = () =>
+                                {
+                                    if (producer != null)
+                                    {
+                                        producer.CancelLastOfUnitType(data);
+                                    }
+                                };
+                            }
+
                             unitButtons.Add(button, trainable);
                             ConfigureButtonVisuals(button, trainable.UnitIcon, trainable.UnitName);
                         }
@@ -828,6 +841,20 @@ namespace RTSFramework.UI
                                 researcher.TryQueueResearch(data);
                                 UpdateSelectionUI();
                             });
+
+                            // Add Right-Click cancel support
+                            var clickReceiver = btnObj.AddComponent<RTSButtonRightClickReceiver>();
+                            if (clickReceiver != null)
+                            {
+                                clickReceiver.OnRightClick = () =>
+                                {
+                                    if (researcher != null)
+                                    {
+                                        researcher.CancelLastOfUpgradeType(data);
+                                        UpdateSelectionUI();
+                                    }
+                                };
+                            }
 
                             upgradeButtons.Add(button, upgrade);
                             ConfigureButtonVisuals(button, upgrade.Icon, upgrade.UpgradeName);

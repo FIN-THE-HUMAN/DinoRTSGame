@@ -31,6 +31,7 @@ namespace RTSFramework.CameraSystem
         private Vector3 inputDirection;
         private float zoomInput;
         private float rotationInput;
+        private float currentSpeedMultiplier = 1f;
 
         // Shake parameters
         private Vector3 shakeOffset;
@@ -80,26 +81,32 @@ namespace RTSFramework.CameraSystem
                 return;
             }
 
-            // Keyboard Movement
+            // Keyboard Movement (Arrow keys only, WASD freed for hotkeys)
             float x = 0f;
             float z = 0f;
-
+ 
             var keyboard = Keyboard.current;
             if (keyboard != null)
             {
-                if (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed) z = 1f;
-                if (keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed) z = -1f;
-                if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed) x = -1f;
-                if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed) x = 1f;
-
+                if (keyboard.upArrowKey.isPressed) z = 1f;
+                if (keyboard.downArrowKey.isPressed) z = -1f;
+                if (keyboard.leftArrowKey.isPressed) x = -1f;
+                if (keyboard.rightArrowKey.isPressed) x = 1f;
+ 
                 // Rotation Input
                 rotationInput = 0f;
                 if (keyboard.qKey.isPressed) rotationInput = 1f;
                 if (keyboard.eKey.isPressed) rotationInput = -1f;
             }
-
+ 
             // Screen Edge Panning
             var mouse = Mouse.current;
+            currentSpeedMultiplier = 1f;
+            if (mouse != null && mouse.rightButton.isPressed)
+            {
+                currentSpeedMultiplier = 2.5f; // Fast pan speed multiplier
+            }
+
             if (useScreenEdgePanning && mouse != null)
             {
                 Vector2 mousePos = mouse.position.ReadValue();
@@ -107,12 +114,12 @@ namespace RTSFramework.CameraSystem
                 {
                     if (mousePos.x < screenEdgeThreshold) x = -1f;
                     else if (mousePos.x > Screen.width - screenEdgeThreshold) x = 1f;
-
+ 
                     if (mousePos.y < screenEdgeThreshold) z = -1f;
                     else if (mousePos.y > Screen.height - screenEdgeThreshold) z = 1f;
                 }
             }
-
+ 
             inputDirection = new Vector3(x, 0, z).normalized;
 
             // Zoom Input
@@ -144,7 +151,7 @@ namespace RTSFramework.CameraSystem
                 right.Normalize();
 
                 Vector3 direction = (forward * inputDirection.z + right * inputDirection.x).normalized;
-                targetPosition += direction * (moveSpeed * Time.deltaTime);
+                targetPosition += direction * (moveSpeed * currentSpeedMultiplier * Time.deltaTime);
             }
         }
 

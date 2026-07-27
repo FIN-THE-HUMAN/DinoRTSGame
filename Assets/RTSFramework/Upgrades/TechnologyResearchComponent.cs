@@ -120,6 +120,49 @@ namespace RTSFramework.Upgrades
             Debug.Log("Canceled research of: " + canceled.UpgradeName + " and refunded cost.");
         }
 
+        public void CancelLastOfUpgradeType(UpgradeData upgrade)
+        {
+            if (upgrade == null || researchQueue.Count == 0) return;
+
+            List<UpgradeData> temp = new List<UpgradeData>(researchQueue);
+            int targetIndex = -1;
+            for (int i = temp.Count - 1; i >= 0; i--)
+            {
+                if (temp[i] == upgrade)
+                {
+                    targetIndex = i;
+                    break;
+                }
+            }
+
+            if (targetIndex != -1)
+            {
+                UpgradeData canceled = temp[targetIndex];
+                temp.RemoveAt(targetIndex);
+
+                researchQueue.Clear();
+                foreach (var item in temp)
+                {
+                    researchQueue.Enqueue(item);
+                }
+
+                // Refund resources
+                foreach (var c in canceled.Cost)
+                {
+                    ResourceManager.Instance.AddResource(building.Faction, c.resourceType, c.amount);
+                }
+
+                if (targetIndex == 0)
+                {
+                    currentResearchTimeElapsed = 0f;
+                    researchProgress = 0f;
+                }
+
+                OnQueueChanged?.Invoke();
+                Debug.Log("Canceled research of: " + canceled.UpgradeName + " and refunded cost.");
+            }
+        }
+
         private void CompleteResearch()
         {
             if (researchQueue.Count == 0) return;
