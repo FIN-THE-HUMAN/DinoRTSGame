@@ -46,6 +46,31 @@ namespace RTSFramework.Combat
             float dist = Mathf.Max(0.1f, initialDistance);
             travelDuration = dist / speed;
             age = 0f;
+
+            // Dynamically attach a beautiful trail renderer
+            var trail = gameObject.GetComponent<TrailRenderer>();
+            if (trail == null)
+            {
+                trail = gameObject.AddComponent<TrailRenderer>();
+                trail.time = 0.22f;
+                trail.startWidth = 0.14f;
+                trail.endWidth = 0.0f;
+                
+                Shader spritesShader = Shader.Find("Sprites/Default");
+                if (spritesShader == null) spritesShader = Shader.Find("Legacy Shaders/Particles/Additive");
+                if (spritesShader != null)
+                {
+                    trail.material = new Material(spritesShader);
+                }
+
+                Gradient gradient = new Gradient();
+                gradient.SetKeys(
+                    new GradientColorKey[] { new GradientColorKey(new Color(1f, 0.55f, 0.1f), 0.0f), new GradientColorKey(new Color(1f, 0.9f, 0.25f), 1.0f) },
+                    new GradientAlphaKey[] { new GradientAlphaKey(0.7f, 0.0f), new GradientAlphaKey(0.0f, 1.0f) }
+                );
+                trail.colorGradient = gradient;
+            }
+
             isInitialized = true;
         }
 
@@ -117,6 +142,9 @@ namespace RTSFramework.Combat
 
         protected void PlayHitEffects()
         {
+            // Trigger procedural particle explosion
+            RTSCombatVFXManager.SpawnImpactEffect(transform.position);
+
             // Trigger particles
             if (hitEffectPrefab != null)
             {

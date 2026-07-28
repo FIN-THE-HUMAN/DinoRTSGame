@@ -188,10 +188,17 @@ namespace RTSFramework.Combat
 
         private void Die()
         {
+            bool isUnit = GetComponent<Units.UnitController>() != null;
+
             if (Audio.RTSAudioManager.Instance != null)
             {
-                bool isUnit = GetComponent<Units.UnitController>() != null;
                 Audio.RTSAudioManager.Instance.PlayDeathSound(transform.position, isUnit);
+            }
+
+            // Trigger massive collapse effects if this is a building
+            if (!isUnit)
+            {
+                RTSCombatVFXManager.SpawnBuildingDestructionEffect(transform.position);
             }
 
             OnDeath?.Invoke();

@@ -119,6 +119,9 @@ namespace RTSFramework.Combat
                         proj.Initialize(target, attackDamage, gameObject);
                     }
 
+                    // Procedural muzzle flash
+                    RTSCombatVFXManager.SpawnMuzzleFlash(spawnPos, spawnRot);
+
                     if (Audio.RTSAudioManager.Instance != null)
                     {
                         Audio.RTSAudioManager.Instance.PlayWeaponFireSound(spawnPos, true);
@@ -130,6 +133,15 @@ namespace RTSFramework.Combat
                 {
                     // Melee Attack: Apply Damage Instantly
                     targetHealth.TakeDamage(attackDamage, gameObject);
+
+                    // Procedural melee impact visual
+                    Vector3 impactPos = target.transform.position + Vector3.up * 1f;
+                    var targetCol = target.GetComponent<Collider>();
+                    if (targetCol != null)
+                    {
+                        impactPos = targetCol.bounds.center;
+                    }
+                    RTSCombatVFXManager.SpawnMeleeImpactEffect(impactPos);
 
                     if (Audio.RTSAudioManager.Instance != null)
                     {
