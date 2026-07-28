@@ -160,9 +160,10 @@ namespace RTSFramework.UI
             }
 
             // Dynamically activate the MinimapPanel at runtime if it was disabled in the Editor
-            if (transform.parent != null)
+            GameObject canvasObj = GameObject.Find("RTS_UI_Canvas");
+            if (canvasObj != null)
             {
-                Transform minimapTrans = transform.parent.Find("MinimapPanel");
+                Transform minimapTrans = canvasObj.transform.Find("MinimapPanel");
                 if (minimapTrans != null)
                 {
                     minimapTrans.gameObject.SetActive(true);

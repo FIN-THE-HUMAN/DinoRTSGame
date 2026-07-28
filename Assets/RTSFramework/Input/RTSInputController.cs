@@ -653,5 +653,110 @@ namespace RTSFramework.InputSystem
                 }
             }
         }
+
+        public void IssueMinimapRightClickCommand(Vector3 worldPoint)
+        {
+            var keyboard = Keyboard.current;
+            bool isQueueing = keyboard != null && (keyboard.shiftKey.isPressed || keyboard.leftShiftKey.isPressed);
+
+            // 1. Check if we are in Attack-Move mode
+            if (isAttackMoveMode)
+            {
+                isAttackMoveMode = false;
+                List<UnitController> movingUnits = GetSelectedPlayerUnits();
+                bool cmdIssued = false;
+                foreach (var unit in movingUnits)
+                {
+                    unit.GiveCommand(new AttackMoveCommand(worldPoint), isQueueing);
+                    cmdIssued = true;
+                }
+                if (cmdIssued) PlayLeadVoice(true);
+                return;
+            }
+
+            // 2. Check if we are in Guard mode
+            if (isGuardMode)
+            {
+                isGuardMode = false;
+                List<UnitController> movingUnits = GetSelectedPlayerUnits();
+                bool cmdIssued = false;
+                foreach (var unit in movingUnits)
+                {
+                    unit.GiveCommand(new GuardCommand(worldPoint), isQueueing);
+                    cmdIssued = true;
+                }
+                if (cmdIssued) PlayLeadVoice(true);
+                return;
+            }
+
+            // 3. Check if we have a single player-owned production building selected (set rally point)
+            if (SelectionManager.Instance != null && SelectionManager.Instance.SelectedObjects.Count == 1)
+            {
+                var firstSelected = SelectionManager.Instance.SelectedObjects[0];
+                if (firstSelected != null && !firstSelected.Equals(null))
+                {
+                    var producer = firstSelected.GameObject.GetComponent<Buildings.UnitProductionComponent>();
+                    if (producer != null && firstSelected.IsPlayerOwned)
+                    {
+                        producer.SetRallyPoint(worldPoint);
+                        return;
+                    }
+                }
+            }
+
+            // 4. Default: Move command to worldPoint using spiral offsets
+            List<UnitController> selectedUnits = GetSelectedPlayerUnits();
+            if (selectedUnits.Count > 0)
+            {
+                bool commandIssued = false;
+                for (int i = 0; i < selectedUnits.Count; i++)
+                {
+                    Vector3 targetPos = worldPoint;
+
+                    if (selectedUnits.Count > 1)
+                    {
+                        Vector3 offset = GetSpiralOffset(i, 1.8f);
+                        Vector3 candidatePos = worldPoint + offset;
+
+                        if (NavMesh.SamplePosition(candidatePos, out NavMeshHit navHit, 3.0f, NavMesh.AllAreas))
+                        {
+                            targetPos = navHit.position;
+                        }
+                        else
+                        {
+                            targetPos = worldPoint;
+                        }
+                    }
+
+                    selectedUnits[i].GiveCommand(new MoveCommand(targetPos), isQueueing);
+                    commandIssued = true;
+                }
+
+                if (commandIssued)
+                {
+                    PlayLeadVoice(true);
+                }
+            }
+        }
+
+        private List<UnitController> GetSelectedPlayerUnits()
+        {
+            List<UnitController> units = new List<UnitController>();
+            if (SelectionManager.Instance != null)
+            {
+                foreach (var selected in SelectionManager.Instance.SelectedObjects)
+                {
+                    if (selected == null || selected.Equals(null)) continue;
+                    if (selected.GameObject.TryGetComponent<UnitController>(out var unit))
+                    {
+                        if (unit.IsPlayerOwned)
+                        {
+                            units.Add(unit);
+                        }
+                    }
+                }
+            }
+            return units;
+        }
     }
 }

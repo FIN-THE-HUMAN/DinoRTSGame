@@ -5,7 +5,7 @@ using UnityEngine.EventSystems;
 namespace RTSFramework.UI
 {
     [RequireComponent(typeof(RawImage))]
-    public class RTSMinimap : MonoBehaviour, IPointerDownHandler, IDragHandler
+    public class RTSMinimap : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerClickHandler
     {
         private Camera minimapCamera;
         private RectTransform rectTransform;
@@ -113,6 +113,49 @@ namespace RTSFramework.UI
                 if (camController != null)
                 {
                     camController.SetTargetPosition(targetWorldPos);
+                }
+            }
+        }
+
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            if (eventData.button == PointerEventData.InputButton.Right)
+            {
+                IssueCommandToClick(eventData);
+            }
+        }
+
+        private void IssueCommandToClick(PointerEventData eventData)
+        {
+            if (!isInitialized || rectTransform == null) return;
+
+            // Convert screen position to local point inside the RawImage RectTransform
+            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, eventData.position, eventData.pressEventCamera, out Vector2 localPoint))
+            {
+                // Normalize coordinates relative to RawImage size (0 to 1)
+                float u = (localPoint.x - rectTransform.rect.x) / rectTransform.rect.width;
+                float v = (localPoint.y - rectTransform.rect.y) / rectTransform.rect.height;
+
+                u = Mathf.Clamp01(u);
+                v = Mathf.Clamp01(v);
+
+                // Map U and V to the world coordinates
+                float worldX = Mathf.Lerp(mapMin.x, mapMax.x, u);
+                float worldZ = Mathf.Lerp(mapMin.z, mapMax.z, v);
+
+                Vector3 targetWorldPos = new Vector3(worldX, 0f, worldZ);
+
+                // Sample terrain height to get correct ground Y
+                Terrain terrain = Terrain.activeTerrain;
+                if (terrain != null)
+                {
+                    targetWorldPos.y = terrain.SampleHeight(targetWorldPos) + terrain.transform.position.y;
+                }
+
+                // Issue command via InputController
+                if (RTSFramework.InputSystem.RTSInputController.Instance != null)
+                {
+                    RTSFramework.InputSystem.RTSInputController.Instance.IssueMinimapRightClickCommand(targetWorldPos);
                 }
             }
         }
