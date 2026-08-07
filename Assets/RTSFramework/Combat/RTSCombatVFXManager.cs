@@ -11,6 +11,7 @@ namespace RTSFramework.Combat
             flashObj.transform.rotation = rotation;
 
             var ps = flashObj.AddComponent<ParticleSystem>();
+            ps.Stop();
             var main = ps.main;
             main.duration = 0.1f;
             main.loop = false;
@@ -51,6 +52,7 @@ namespace RTSFramework.Combat
             impactObj.transform.position = position;
 
             var ps = impactObj.AddComponent<ParticleSystem>();
+            ps.Stop();
             var main = ps.main;
             main.duration = 0.2f;
             main.loop = false;
@@ -90,6 +92,7 @@ namespace RTSFramework.Combat
             slashObj.transform.position = position;
 
             var ps = slashObj.AddComponent<ParticleSystem>();
+            ps.Stop();
             var main = ps.main;
             main.duration = 0.15f;
             main.loop = false;
@@ -129,6 +132,7 @@ namespace RTSFramework.Combat
             debrisObj.transform.position = position;
 
             var ps = debrisObj.AddComponent<ParticleSystem>();
+            ps.Stop();
             var main = ps.main;
             main.duration = 2.0f;
             main.loop = false;
@@ -164,6 +168,7 @@ namespace RTSFramework.Combat
             chunksObj.transform.localPosition = Vector3.zero;
 
             var ps2 = chunksObj.AddComponent<ParticleSystem>();
+            ps2.Stop();
             var main2 = ps2.main;
             main2.duration = 1.0f;
             main2.loop = false;

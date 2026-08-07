@@ -175,13 +175,11 @@ namespace RTSFramework.InputSystem
                 }
                 else
                 {
-                    // Box Selection (Only targets player-owned units)
+                    // Box Selection (Prioritizes player-owned units over buildings)
                     Bounds viewportBounds = GetViewportBounds(mainCamera, dragStartPosition, dragEndPosition);
                     
-                    if (!isAccumulating)
-                    {
-                        SelectionManager.Instance.ClearSelection();
-                    }
+                    List<ISelectable> unitsInBox = new List<ISelectable>();
+                    List<ISelectable> buildingsInBox = new List<ISelectable>();
 
                     foreach (var selectable in SelectionManager.AllSelectables)
                     {
@@ -190,13 +188,38 @@ namespace RTSFramework.InputSystem
                         Vector3 viewportPos = mainCamera.WorldToViewportPoint(selectable.Transform.position);
                         if (viewportBounds.Contains(viewportPos))
                         {
-                            if (selectable.GameObject.TryGetComponent<UnitController>(out var unit))
+                            if (selectable.IsPlayerOwned)
                             {
-                                if (unit.IsPlayerOwned)
+                                if (selectable.GameObject.GetComponent<UnitController>() != null)
                                 {
-                                    SelectionManager.Instance.Select(selectable, false);
+                                    unitsInBox.Add(selectable);
+                                }
+                                else if (selectable.GameObject.GetComponent<Buildings.Building>() != null)
+                                {
+                                    buildingsInBox.Add(selectable);
                                 }
                             }
+                        }
+                    }
+
+                    if (!isAccumulating)
+                    {
+                        SelectionManager.Instance.ClearSelection();
+                    }
+
+                    // Priority Filter: Select units if any are found, otherwise select buildings
+                    if (unitsInBox.Count > 0)
+                    {
+                        foreach (var u in unitsInBox)
+                        {
+                            SelectionManager.Instance.Select(u, false);
+                        }
+                    }
+                    else
+                    {
+                        foreach (var b in buildingsInBox)
+                        {
+                            SelectionManager.Instance.Select(b, false);
                         }
                     }
                 }

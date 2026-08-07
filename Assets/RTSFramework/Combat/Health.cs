@@ -202,7 +202,17 @@ namespace RTSFramework.Combat
             }
 
             OnDeath?.Invoke();
-            Destroy(gameObject);
+
+            // If it's a unit with an animation controller, delegate the destruction after playing death anim
+            var animController = GetComponent<Units.RTSUnitAnimationController>();
+            if (isUnit && animController != null)
+            {
+                animController.TriggerDeathExternal();
+            }
+            else
+            {
+                Destroy(gameObject);
+            }
         }
     }
 }
